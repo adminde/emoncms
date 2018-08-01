@@ -41,7 +41,7 @@ function feed_controller()
         if ($route->action == "list" && $session['write']) {
         
             global $ui_version_2;
-            if ($device && !(isset($ui_version_2) && !$ui_version_2)) {
+            if ($device && isset($ui_version_2) && $ui_version_2) {
                 $result = view("Modules/feed/Views/feedlist_view_v2.php",array());
             } else {
                 $result = view("Modules/feed/Views/feedlist_view.php",array());
@@ -67,7 +67,7 @@ function feed_controller()
             $route->format = "text";
             $result = $feed->get_id($session['userid'],get("name"));
         } elseif ($route->action == "create" && $session['write']) {
-            $result = $feed->create($session['userid'],get('tag'),get('name'),get('datatype'),get('engine'),json_decode(get('options')));
+            $result = $feed->create($session['userid'],get('tag'),get('name'),get('datatype'),get('engine'),json_decode(get('options')),get('unit'));
         } elseif ($route->action == "updatesize" && $session['write']) {
             $result = $feed->update_user_feeds_size($session['userid']);
         } elseif ($route->action == "buffersize" && $session['write']) {

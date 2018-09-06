@@ -226,7 +226,7 @@ class User
     {
         // Input validation, sanitisation and error reporting
         if (!$username || !$password || !$email) return array('success'=>false, 'message'=>_("Missing username, password or email parameter"));
-        if (!ctype_alnum($username)) return array('success'=>false, 'message'=>_("Username must only contain a-z and 0-9 characters"));
+        if (!ctype_alnum(str_replace(array('.', '_', '-'), '', $username))) return array('success'=>false, 'message'=>_("Username must only contain a-z and 0-9 characters"));
         if ($this->get_id($username) != 0) return array('success'=>false, 'message'=>_("Username already exists"));
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return array('success'=>false, 'message'=>_("Email address format error"));
@@ -268,7 +268,7 @@ class User
     public function send_verification_email($username)
     {
         // check for valid username format
-        if (preg_replace('/[^\p{N}\p{L}_\s-]/u','',$username)!=$username) return array('success'=>false, 'message'=>_("Invalid username"));
+        if (preg_replace('/[^\p{N}\p{L}_\s.-]/u','',$username)!=$username) return array('success'=>false, 'message'=>_("Invalid username"));
 
         // check that username exists and load email and verification status
         if (!$stmt = $this->mysqli->prepare("SELECT id,email,email_verified FROM users WHERE username=?")) {
@@ -355,7 +355,7 @@ class User
 
         // filter out all except for alphanumeric white space and dash
         // if (!ctype_alnum($username))
-        $username_out = preg_replace('/[^\p{N}\p{L}_\s-]/u','',$username);
+        $username_out = preg_replace('/[^\p{N}\p{L}_\s.-]/u','',$username);
 
         if ($username_out!=$username) return array('success'=>false, 'message'=>_("Username must only contain a-z 0-9 dash and underscore, if you created an account before this rule was in place enter your username without the non a-z 0-9 dash underscore characters to login and feel free to change your username on the profile page."));
 
@@ -419,7 +419,7 @@ class User
     public function get_apikeys_from_login($username, $password)
     {
         if (!$username || !$password) return array('success'=>false, 'message'=>_("Username or password empty"));
-        $username_out = preg_replace('/[^\p{N}\p{L}_\s-]/u','',$username);
+        $username_out = preg_replace('/[^\p{N}\p{L}_\s.-]/u','',$username);
         if ($username_out!=$username) return array('success'=>false, 'message'=>_("Username must only contain a-z 0-9 dash and underscore"));
 
         $stmt = $this->mysqli->prepare("SELECT id,password,salt,apikey_write,apikey_read FROM users WHERE username=?");
@@ -487,7 +487,7 @@ class User
 
     public function passwordreset($username,$emailto)
     {
-        $username_out = preg_replace('/[^\p{N}\p{L}_\s-]/u','',$username);
+        $username_out = preg_replace('/[^\p{N}\p{L}_\s.-]/u','',$username);
         if (!filter_var($emailto, FILTER_VALIDATE_EMAIL)) return array('success'=>false, 'message'=>_("Email address format error"));
 
         $stmt = $this->mysqli->prepare("SELECT id FROM users WHERE username=? AND email=?");
@@ -542,7 +542,7 @@ class User
         $userid = (int) $userid;
         if (strlen($username) < 3 || strlen($username) > 30) return array('success'=>false, 'message'=>_("Username length error"));
 
-        if (!ctype_alnum($username)) return array('success'=>false, 'message'=>_("Username must only contain a-z and 0-9 characters"));
+        if (!ctype_alnum(str_replace(array('.', '_', '-'), '', $username))) return array('success'=>false, 'message'=>_("Username must only contain a-z and 0-9 characters"));
 
         $userid_from_username = $this->get_id($username);
 

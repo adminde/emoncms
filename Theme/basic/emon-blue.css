@@ -296,3 +296,17 @@ input[type=text][class=variable-name-edit] {
 @media(max-width:979px) {
     .controls.affix{top:0}
 }
+
+.app-header,
+.graph-header {
+    color: #fff;
+    background-color: #44b3e2;
+}
+.app-header .action:hover,
+.graph-header .action:hover {
+    background-color: #2eaadf;
+}
+
+.graph-body {
+    background-color: #44b3e210;
+}

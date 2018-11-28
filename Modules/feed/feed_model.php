@@ -100,12 +100,16 @@ class Feed
     public function create($userid,$tag,$name,$datatype,$engine,$options_in,$unit='')
     {
         $userid = (int) $userid;
-        if (preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$name)!=$name) return array('success'=>false, 'message'=>'invalid characters in feed name');
-        if (preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$tag)!=$tag) return array('success'=>false, 'message'=>'invalid characters in feed tag');
+        if (preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u', '', $name) != $name) {
+            return array('success'=>false, 'message'=>_("Feed name must only contain A-Z a-z 0-9 - _ . : / and space characters"));
+        }
+        if (preg_replace('/[^\p{N}\p{L}\-\_\.\:\s]/u', '', $tag) != $tag) {
+            return array('success'=>false, 'message'=>_("Feed tag must only contain A-Z a-z 0-9 - _ . : and space characters"));
+        }
         $datatype = (int) $datatype;
         $engine = (int) $engine;
         $public = false;
-    
+        
         if (!ENGINE::is_valid($engine)) {
             $this->log->error("Engine id '".$engine."' is not supported.");
             return array('success'=>false, 'message'=>"ABORTED: Engine id $engine is not supported.");
@@ -824,6 +828,9 @@ class Feed
         if (isset($fields->name)) {
             //remove illegal characters
             $fields->name = trim(filter_var($fields->name, FILTER_SANITIZE_STRING));
+            if (preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u', '', $fields->name) != $fields->name) {
+                return array('success'=>false, 'message'=>_("Feed name must only contain A-Z a-z 0-9 - _ . : / and space characters"));
+            }
             //prepare an sql statement that cannot be altered by sql injection
             if ($stmt = $this->mysqli->prepare("UPDATE feeds SET name = ? WHERE id = ?")) {
                 $stmt->bind_param("si",$fields->name, $id);
@@ -840,7 +847,9 @@ class Feed
         }
         
         if (isset($fields->tag)) {
-            if (preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$fields->tag)!=$fields->tag) return array('success'=>false, 'message'=>'invalid characters in feed tag');
+            if (preg_replace('/[^\p{N}\p{L}\-\_\.\:\s]/u', '', $fields->tag) != $fields->tag) {
+                return array('success'=>false, 'message'=>_("Feed tag must only contain A-Z a-z 0-9 - _ . : and space characters"));
+            }
             if ($stmt = $this->mysqli->prepare("UPDATE feeds SET tag = ? WHERE id = ?")) {
                 $stmt->bind_param("si",$fields->tag,$id);
                 if ($stmt->execute()) $success = true;

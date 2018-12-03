@@ -292,7 +292,7 @@ class Feed
     public function get_id($userid,$name)
     {
         $userid = (int) $userid;
-        $name = preg_replace('/[^\w\s-:]/','',$name);
+        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$name);
         
         $stmt = $this->mysqli->prepare("SELECT id FROM feeds WHERE userid=? AND name=?");
         $stmt->bind_param("is",$userid,$name);
@@ -307,8 +307,8 @@ class Feed
     public function exists_tag_name($userid,$tag,$name)
     {
         $userid = (int) $userid;
-        $name = preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$name);
-        $tag = preg_replace('/[^\p{N}\p{L}_\s-:]/u','',$tag);
+        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$name);
+        $tag = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$tag);
         
         $stmt = $this->mysqli->prepare("SELECT id FROM feeds WHERE userid=? AND BINARY name=? AND BINARY tag=?");
         $stmt->bind_param("iss",$userid,$name,$tag);
@@ -748,7 +748,7 @@ class Feed
             $feedids[$i] = $feedid;
         }
         // Basic name input sanitisation
-        $name = preg_replace('/[^\w\s-]/','',$name);
+        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$name);
         
         global $csv_decimal_places, $csv_decimal_place_separator, $csv_field_separator;
         

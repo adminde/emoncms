@@ -78,8 +78,8 @@ class Input
     public function exists_nodeid_name($userid,$nodeid,$name)
     {
         $userid = (int) $userid;
-        $nodeid = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$nodeid);
-        $name = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$name);
+        $nodeid = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$nodeid);
+        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$name);
         
         $stmt = $this->mysqli->prepare("SELECT id FROM input WHERE userid=? AND nodeid=? AND name=?");
         $stmt->bind_param("iss",$userid,$nodeid,$name);

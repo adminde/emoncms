@@ -30,9 +30,9 @@ class Input
     public function create_input($userid, $nodeid, $name)
     {
         $userid = (int) $userid;
-        $nodeid = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$nodeid);
+        $nodeid = preg_replace('/[^\p{N}\p{L}\-\_\.\/\s]/u','',$nodeid);
         // if (strlen($nodeid)>16) return false; // restriction placed on emoncms.org
-        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$name);
+        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\/\s]/u','',$name);
         // if (strlen($name)>64) return false; // restriction placed on emoncms.org
         $id = false;
         
@@ -78,8 +78,8 @@ class Input
     public function exists_nodeid_name($userid,$nodeid,$name)
     {
         $userid = (int) $userid;
-        $nodeid = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$nodeid);
-        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$name);
+        $nodeid = preg_replace('/[^\p{N}\p{L}\-\_\.\/\s]/u','',$nodeid);
+        $name = preg_replace('/[^\p{N}\p{L}\-\_\.\/\s]/u','',$name);
         
         $stmt = $this->mysqli->prepare("SELECT id FROM input WHERE userid=? AND nodeid=? AND name=?");
         $stmt->bind_param("iss",$userid,$nodeid,$name);
@@ -146,7 +146,7 @@ class Input
         $success = false;
         
         if (isset($fields->name)) {
-            if (preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u', '', $fields->name) != $fields->name) {
+            if (preg_replace('/[^\p{N}\p{L}\-\_\.\/\s]/u', '', $fields->name) != $fields->name) {
                 return array('success'=>false, 'message'=>"Input name must only contain A-Z a-z 0-9 - _ . : / and space characters");
             }
             $stmt = $this->mysqli->prepare("UPDATE input SET name = ? WHERE id = ?");
@@ -158,7 +158,7 @@ class Input
         }
         
         if (isset($fields->description)) {
-            if (preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u', '', $fields->description) != $fields->description) {
+            if (preg_replace('/[^\p{N}\p{L}\-\_\.\/\s]/u', '', $fields->description) != $fields->description) {
                 return array('success'=>false, 'message'=>"Input description must only contain A-Z a-z 0-9 - _ . : / and space characters");
             }
             $stmt = $this->mysqli->prepare("UPDATE input SET description = ? WHERE id = ?");

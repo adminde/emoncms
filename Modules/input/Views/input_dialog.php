@@ -47,8 +47,8 @@
 <template id="edit-input-form">
     <form class="form-inline" style="margin-bottom:.5em">
         <input name="inputid" type="hidden">
-        <input name="name" required pattern="[A-Za-z0-9_\-@\.' ]*" title="<?php echo _('Basic text only. Symbols allowed _-.@')?>" class="form-control" placeholder="<?php echo _('name') ?>" data-lpignore="true">
-        <input name="description" pattern="[A-Za-z0-9_\-@\.' ]*" title="<?php echo _('Basic text only. Symbols allowed _-.@')?>" class="form-control" placeholder="<?php echo _('description') ?>" data-lpignore="true">
+        <input name="name" required pattern="[A-Za-z0-9_\-@\.'/ ]*" title="<?php echo _('Basic text only. Symbols allowed _-.@')?>" class="form-control" placeholder="<?php echo _('name') ?>" data-lpignore="true">
+        <input name="description" pattern="[A-Za-z0-9_\-@\.'/ ]*" title="<?php echo _('Basic text only. Symbols allowed _-.@')?>" class="form-control" placeholder="<?php echo _('description') ?>" data-lpignore="true">
         <button class="button-small"><?php echo _('Save') ?> <span class="input_id"></span></button>
     </form>
 </template>

@@ -614,6 +614,14 @@ function getUpdateLog() {
   });
 }
 
+$("#devicereload").click(function() {
+  $.ajax({ url: path+"device/template/reload.json", async: true, dataType: "json", success: function(result)
+    {
+      alert(result.message);
+    }
+  });
+});
+
 $("#redisflush").click(function() {
   $.ajax({ url: path+"admin/redisflush.json", async: true, dataType: "text", success: function(result)
     {

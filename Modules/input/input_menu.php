@@ -12,4 +12,10 @@
     else {
         $name = dgettext($domain, "Inputs");
     }
-    $menu_dropdown_config[] = array('name'=>$name, 'icon'=>'icon-arrow-right', 'path'=>"input/view" , 'session'=>"write", 'order'=>10 );
+    $menu_dropdown_config[] = array(
+        'name'=>$name,
+        'icon'=>'icon-arrow-right',
+        'path'=>"input/view" ,
+        'session'=>"write",
+        'order'=>10
+    );

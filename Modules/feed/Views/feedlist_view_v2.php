@@ -125,7 +125,7 @@ body{padding:0!important}
 <div id="mouse-position"></div>
 <div id="feed-header">
     <span id="api-help" style="float:right"><a href="<?php echo $path; ?>feed/api"><?php echo _('Feed API Help'); ?></a></span>
-    <h3><?php echo _('Feeds'); ?></h3>
+    <h2><?php echo _('Data feeds'); ?></h2>
 </div>
 <div id="feed-controls" class="controls hide" data-spy="affix" data-offset-top="100">
     <button id="expand-collapse-all" class="btn" title="<?php echo _('Collapse') ?>" data-alt-title="<?php echo _('Expand') ?>"><i class="icon icon-resize-small"></i></button>

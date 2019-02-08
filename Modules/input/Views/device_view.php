@@ -134,7 +134,8 @@ input[type="checkbox"] { margin:0px; }
     </div>
     
     <div id="input-footer" class="hide">
-        <button id="device-new" class="btn btn-small" >&nbsp;<i class="icon-plus-sign" ></i>&nbsp;<?php echo _('New device'); ?></button>
+        <button id="device-new" class="btn btn-small">&nbsp;<span class="icon-plus-sign" ></span>&nbsp;<?php echo _('New device'); ?></button>
+        <a id="schedule-config" class="btn btn-small" style="text-decoration:none;" href="<?php echo $path; ?>schedule/view">&nbsp;<span class="icon-time" ></span>&nbsp;<?php echo _('Edit schedules'); ?></a>
     </div>
     <div id="input-loader" class="ajax-loader"></div>
 </div>

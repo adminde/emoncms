@@ -377,6 +377,11 @@ class Feed
         } else {
             $feeds = $this->mysql_get_user_feeds($userid);
         }
+        usort($feeds, function($f1, $f2) {
+            if($f1['tag'] == $f2['tag'])
+                return strcmp($f1['name'], $f2['name']);
+            return strcmp($f1['tag'], $f2['tag']);
+        });
         return $feeds;
     }
 
@@ -859,7 +864,7 @@ class Feed
         }
 
         if (isset($fields->unit)) {
-            if (preg_replace('/[^\p{N}\p{L}_°%\s-:]/u','',$fields->unit)!=$fields->unit) return array('success'=>false, 'message'=>'invalid characters in feed unit');
+            if (preg_replace('/[^\p{N}\p{L}_°\/%\s-:]/u','',$fields->unit)!=$fields->unit) return array('success'=>false, 'message'=>'invalid characters in feed unit');
             if (strlen($fields->unit) > 10) return array('success'=>false, 'message'=>'feed unit too long');
             if ($stmt = $this->mysqli->prepare("UPDATE feeds SET unit = ? WHERE id = ?")) {
                 $stmt->bind_param("si",$fields->unit,$id);
@@ -1043,7 +1048,7 @@ class Feed
     }
 
     public function set_processlist($userid, $id, $processlist, $process_list)
-    {    
+    {
         $userid = (int) $userid;
         
         // Validate processlist
@@ -1095,8 +1100,11 @@ class Feed
                 
                     case ProcessArg::FEEDID:
                         $feedid = (int) $arg;
+                        $isVirtual = $this->get($id)['engine']==7;
                         if (!$this->access($userid,$feedid)) {
                             return array('success'=>false, 'message'=>_("Invalid feed"));
+                        } else if ($isVirtual) {
+                            return array('success'=>false, 'message'=>_("Cannot use virtual feed as source"));
                         }
                         break;
                         

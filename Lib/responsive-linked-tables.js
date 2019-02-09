@@ -223,7 +223,7 @@ function itemElapsedStatus(elapsed) {
     if (elapsed < 0) {
     	status = 'status-info'; 
     }
-    else if (secs < 60) {
+    else if (secs < 900) {
     	status = 'status-success'; 
     }
     else if (secs < 7200) {

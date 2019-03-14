@@ -40,10 +40,10 @@
     
     define('EMONCMS_EXEC', 1);
 
-    $fp = fopen("/var/lock/phpmqtt_input.lock", "w");
+    $fp = fopen("/var/lock/emoncms_mqtt.lock", "w");
     if (! flock($fp, LOCK_EX | LOCK_NB)) { echo "Already running\n"; die; }
     
-    chdir(dirname(__FILE__)."/../");
+    chdir(dirname(__FILE__)."/../../../");
     require "Lib/EmonLogger.php";
     require "process_settings.php";
     
@@ -117,6 +117,7 @@
     $last_retry = 0;
     $last_heartbeat = time();
     $count = 0;
+    $pub_count = 0; // used to reduce load relating to checking for messages to be published
     
     $mqtt_client->onConnect('connect');
     $mqtt_client->onDisconnect('disconnect');
@@ -124,13 +125,13 @@
     $mqtt_client->onMessage('message');
 
     // Option 1: extend on this:
-    while(true) {
-        try { 
-            $mqtt_client->loop(); 
+    while(true){
+        try {
+            $mqtt_client->loop();
         } catch (Exception $e) {
             if ($connected) $log->error($e);
         }
-        
+
         if (!$connected && (time()-$last_retry)>5.0) {
             $subscribed = 0;
             $last_retry = time();
@@ -149,34 +150,36 @@
 
         // PUBLISH
         // loop through all queued items in redis
-        if ($connected) {
+        if ($connected && $pub_count>10) {
+            $pub_count = 0;
             $publish_to_mqtt = $redis->hgetall("publish_to_mqtt");
             foreach ($publish_to_mqtt as $topic=>$value) {
                 $redis->hdel("publish_to_mqtt",$topic);
                 $mqtt_client->publish($topic, $value);
             }
-        }
-        // Queue option
-        $queue_topic = 'mqtt-pub-queue';
-        for ($i=0; $i<$redis->llen($queue_topic); $i++) {
-            if ($connected && $data = filter_var_array(json_decode($redis->lpop($queue_topic), true))) {
-                $mqtt_client->publish($data['topic'], json_encode(array("time"=>$data['time'],"value"=>$data['value'])));
+            // Queue option
+            $queue_topic = 'mqtt-pub-queue';
+            for ($i=0; $i<$redis->llen($queue_topic); $i++) {
+                if ($connected && $data = filter_var_array(json_decode($redis->lpop($queue_topic), true))) {
+                    $mqtt_client->publish($data['topic'], json_encode(array("time"=>$data['time'],"value"=>$data['value'])));
+                }
             }
         }
-        
+        $pub_count++;
+
         if ((time()-$last_heartbeat)>300) {
             $last_heartbeat = time();
             $log->info("$count Messages processed in last 5 minutes");
             $count = 0;
-            
+
             // Keep mysql connection open with periodic ping
             if (!$mysqli->ping()) {
                 $log->warn("mysql ping false");
                 die;
             }
         }
-        
-        usleep(1000);
+
+        usleep(10000);
     }
 
     function connect($r, $message) {
@@ -235,7 +238,7 @@
                 // JSON is valid - is it an array
                 $jsoninput = true;
                 $log->info("MQTT Valid JSON found ");
-
+                
                 // If JSON, check to see if there is a time value else set to time now.
                 foreach ($jsondata as $key=>$value) {
                     if (strtolower($key) == 'time') {
@@ -272,7 +275,7 @@
             
             $route = explode("/",$topic);
             $basetopic = explode("/",$mqtt_server['basetopic']);
-
+            
             /*Iterate over base topic to determine correct sub-topic*/
             $st = -1;
             foreach ($basetopic as $subtopic) {
@@ -291,7 +294,7 @@
                 if (isset($route[$st+1])) {
                     $nodeid = $route[$st+1];
                     $dbinputs = $input->get_inputs($userid);
-
+                    
                     if ($jsoninput) {
                         foreach ($jsondata as $key=>$value) {
                             $inputs[] = array("userid"=>$userid, "time"=>$time, "nodeid"=>$nodeid, "name"=>$key, "value"=>$value);
@@ -310,14 +313,14 @@
                 }
             }
             else {
-                $log->error("No matching MQTT topics! None or null inputs will be recorded!");  
+                $log->error("No matching MQTT topics! None or null inputs will be recorded!");
             }
-
+            
             if (!isset($dbinputs[$nodeid])) {
                 $dbinputs[$nodeid] = array();
                 if ($device && method_exists($device,"create")) $device->create($userid,$nodeid);
             }
-
+            
             $tmp = array();
             foreach ($inputs as $i) {
                 $userid = $i['userid'];

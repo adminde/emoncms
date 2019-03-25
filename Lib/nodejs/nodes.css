@@ -1,0 +1,194 @@
+.node-actions {
+    display: table;
+    height: 25px;
+    padding-left: 12px;
+    padding-right: 6px;
+    margin-bottom: 6px;
+    transition: all .2s ease-out
+}
+.node-actions .node-select input[type="checkbox"] {
+    margin: 0px;
+}
+.node-actions .node-select span {
+    margin-left: 8px;
+    font-size: 12px;
+    color: #b3b3b3;
+}
+.node-actions .action:hover {
+    opacity: 0.666;
+}
+.node-actions.affix {
+    position: fixed;
+    z-index: 2;
+    width: calc(100% - 60px);
+    height: 40px;
+    top: 40px;
+}
+.node-actions.affix > * {
+    line-height: 40px; 
+    z-index: 2
+}
+.node-actions.affix:before {
+    position: fixed;
+    z-index: -1;
+    content: '';
+    width: 100%;
+    height: 40px;
+    top: 40px;
+    left: 0px;
+    opacity: 0.85;
+}
+.node-actions.affix .node-select span {
+    color: #fff;
+}
+.node-actions.affix .action span {
+    background-image: url("../../../../Lib/bootstrap/img/glyphicons-halflings-white.png");
+}
+
+@media(max-width:979px) {
+    .node-actions.affix:before,
+    .node-actions.affix { top:0px }
+}
+
+.node {
+    display: table;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.node-header {
+    padding-right: 6px;
+    background-color: #ddd;
+    border-bottom: 1px solid #fff;
+    cursor: pointer;
+}
+.node-header:hover {
+    background-color: #e3e3e3;
+}
+.node-header .node-item {
+    height: 40px;
+}
+.node-header .action {
+    opacity: 0.5;
+}
+.node-header .action:hover {
+    opacity: 0.75;
+}
+.node-header .node-item::after,
+.node-body .node-item::after {
+    height: 40px;
+    width: 6px;
+    content: '';
+    position: absolute;
+}
+.node-header .node-item::after {
+    background-color: #f0f0f0;
+}
+
+.node-body {
+    width: 100%;
+    background-color: #f0f0f0;
+}
+.node-body .node-item {
+    height: 42px;
+}
+.node-body .node-item:hover {
+    background-color: #f5f5f5;
+}
+.node-body .node-item:before {
+    height: 40px;
+    width: 0px;
+    content: '';
+    position: absolute;
+    background: #44b3e2;
+    transition: width .2s ease-out;
+}
+.node-body .node-item:hover:before {
+    width: 2px;
+}
+.node-body .node-item > div {
+    border-bottom: 1px solid #fff;
+    color: #333;
+}
+.node-body .node-item > div:last-child {
+    padding-right: 18px;
+}
+.node-body .node-item .action:hover {
+    opacity: 0.666;
+}
+.node-body .node-item::after {
+    background-color: #ddd;
+    right: 0px;
+}
+.node-body .node-item .node-select {
+    padding-left: 12px;
+    padding-right: 12px;
+    text-align: center;
+}
+.node-body .node-item .node-select input[type="checkbox"] {
+    width: 14px;
+    margin: 14px 0px;
+}
+.node-body .alert {
+    margin: 5px;
+}
+
+.node-item  {
+    display: table-row;
+}
+.node-item > div {
+    display: table-cell;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.node-item .action {
+    width: 14px;
+    padding-left: 12px;
+    padding-right: 12px;
+    text-align: right;
+    cursor: pointer;
+}
+
+.node-collapse {
+    width: 14px;
+    padding-left: 12px;
+    padding-right: 12px;
+    text-align: center;
+}
+.node-collapse .icon-collapse {
+    opacity: 0.333;
+}
+.node-collapse input[type="checkbox"] {
+    width: 14px;
+    margin: 13px 0px;
+}
+
+.node-item .filler {
+    width: 100%;
+}
+
+.node-item.status-info::after {
+    background-color: #3a87ad;
+}
+.node-item.status-success::after {
+    background-color: #28a745;
+}
+.node-item.status-warning::after {
+    background-color: #ffc107;
+}
+.node-item.status-danger::after {
+    background-color: #dc3545;
+}
+
+.node-item.status-info .item-update {
+    color: #3c87aa;
+}
+.node-item.status-success .item-update {
+    color: #28a745;
+}
+.node-item.status-warning .item-update {
+    color: #cc7700;
+}
+.node-item.status-danger .item-update {
+    color: #dc3545;
+}

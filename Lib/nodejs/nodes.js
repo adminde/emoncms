@@ -12,7 +12,7 @@ var nodes = {
     actions: {},
     header: {},
     body: {},
-    empty: "No items configured yet.",
+    empty: 'No items configured yet.',
 
     itemSize: 0,
     items: {},
@@ -20,6 +20,8 @@ var nodes = {
 
     selected: {},
     collapsed: {},
+
+    cookie: 'nodes_cache',
 
     init: function(container) {
         if (!container) {
@@ -33,6 +35,11 @@ var nodes = {
             $(document).off('mousemove');
             nodes.hover = true;
         });
+        
+        if (typeof cookies !== 'undefined' && typeof cookies.get === 'function' &&
+        		cookies.contains(nodes.cookie+'_collapsed')) {
+        	nodes.collapsed = JSON.parse(cookies.get(nodes.cookie+'_collapsed'));
+        }
         
         var actions = "";
         for (let id in nodes.actions) {
@@ -72,14 +79,14 @@ var nodes = {
     },
 
     update: function() {
-    	let time = {};
+        let time = {};
         for (let id in nodes.body) {
             let config = nodes.body[id];
             if (config.type == 'time') {
                 for (let i in items) {
-                	let t = typeof data[id] !== 'undefined' ? data[id] : null;
-                	$(nodes.formatId('item', items[i])+'-'+id, nodes.container)
-                	    .html(nodes.formatTime(t));
+                    let t = typeof data[id] !== 'undefined' ? data[id] : null;
+                    $(nodes.formatId('item', items[i])+'-'+id, nodes.container)
+                        .html(nodes.formatTime(t));
                 }
             }
         }
@@ -238,9 +245,9 @@ var nodes = {
         let time = new Date().getTime();
         if (node) {
             for (let i in data) {
-            	if (typeof data[i][id] !== 'undefined') {
-                	time = Math.min(time, data[i][id]);
-            	}
+                if (typeof data[i][id] !== 'undefined') {
+                    time = Math.min(time, data[i][id]);
+                }
             }
         }
         else {
@@ -262,22 +269,22 @@ var nodes = {
     },
 
     drawActions: function() {
-    	let count = 0;
-    	for (id in nodes.selected) count += nodes.selected[id].length;
+        let count = 0;
+        for (id in nodes.selected) count += nodes.selected[id].length;
         if (count == 0) {
             $('#node-action-select-all input').prop('checked', false).prop('indeterminate', false);
             $('#node-action-delete').hide();
         }
         else {
-        	if (count < nodes.itemSize) {
-	            $('#node-action-select-all input').prop('checked', false).prop('indeterminate', true);
-	            $('#node-action-delete').show();
-	        }
-	        else {
-	            $('#node-action-select-all input').prop('checked', true).prop('indeterminate', false);
-	            $('#node-action-delete').show();
-	        }
-        	nodes.showActions(true);
+            if (count < nodes.itemSize) {
+                $('#node-action-select-all input').prop('checked', false).prop('indeterminate', true);
+                $('#node-action-delete').show();
+            }
+            else {
+                $('#node-action-select-all input').prop('checked', true).prop('indeterminate', false);
+                $('#node-action-delete').show();
+            }
+            nodes.showActions(true);
         }
     },
 
@@ -297,7 +304,7 @@ var nodes = {
 
     selectAll: function(state) {
         for (let nodeid in nodes.items) {
-        	let id = nodes.formatId('node', nodeid);
+            let id = nodes.formatId('node', nodeid);
             if (state && !$('#'+id+'-body').hasClass('in')) {
                 $('#'+id+'-body').collapse('show');
             }
@@ -305,9 +312,9 @@ var nodes = {
             
             nodes.selected[nodeid] = [];
             for (let itemid in nodes.items[nodeid]) {
-            	let item = nodes.items[nodeid][itemid];
+                let item = nodes.items[nodeid][itemid];
                 if (state) {
-                	nodes.selected[nodeid].push(item.id);
+                    nodes.selected[nodeid].push(item.id);
                 }
                 $('#'+nodes.formatId('item', item.id)+'-select').prop('checked', state);
             }
@@ -318,9 +325,9 @@ var nodes = {
     selectNode: function(nodeid, state) {
         nodes.selected[nodeid] = [];
         for (let itemid in nodes.items[nodeid]) {
-        	let item = nodes.items[nodeid][itemid];
+            let item = nodes.items[nodeid][itemid];
             if (state) {
-            	nodes.selected[nodeid].push(item.id);
+                nodes.selected[nodeid].push(item.id);
             }
             $('#'+nodes.formatId('item', item.id)+'-select').prop('checked', state);
         }
@@ -336,19 +343,19 @@ var nodes = {
     },
 
     selectItem: function(nodeid, itemid, state) {
-    	let item = nodes.items[nodeid][itemid];
-    	let index = nodes.selected[nodeid].indexOf(item.id);
+        let item = nodes.items[nodeid][itemid];
+        let index = nodes.selected[nodeid].indexOf(item.id);
         if (index >= 0 && !state) {
-        	nodes.selected[nodeid].splice(index, 1);
+            nodes.selected[nodeid].splice(index, 1);
         }
         else if (index < 0 && state) {
-        	nodes.selected[nodeid].push(item.id);
+            nodes.selected[nodeid].push(item.id);
         }
         
         let select = $('#'+nodes.formatId('node', nodeid)+'-select');
         let count = nodes.selected[nodeid].length;
         if (count == null) {
-        	select.prop('checked', false).prop('indeterminate', false);
+            select.prop('checked', false).prop('indeterminate', false);
         }
         else if (count == Object.keys(nodes.items[nodeid]).length) {
             select.prop('checked', true).prop('indeterminate', false);
@@ -359,7 +366,7 @@ var nodes = {
         nodes.drawActions();
     },
 
-    drawExpand: function(state) {
+    expand: function(state) {
         var expand = $('#node-action-expand-all', nodes.container);
         
         // Set the icon and button title based on the state (true == expanded)
@@ -369,15 +376,25 @@ var nodes = {
         
         expand.data('expand', state);
         expand.prop('title', state ? 'Collapse' : 'Expand');
+        
+        if (typeof cookies !== 'undefined' && typeof cookies.set === 'function') {
+        	if (nodes.expandTimeout != null) {
+                clearTimeout(nodes.expandTimeout);
+        	}
+        	// Debounce the call to save the current state to a local storage cookie
+        	nodes.expandTimeout = setTimeout(function() {
+                cookies.set(nodes.cookie+'_collapsed', JSON.stringify(nodes.collapsed))
+            }, 100)
+        }
     },
 
-    expand: function(state) {
-    	nodes.drawExpand(state);
+    expandAll: function(state) {
+        nodes.expand(state);
         for (id in nodes.collapsed) {
-        	var node = $('#'+nodes.formatId('node', id)+'-body', nodes.container);
+            var node = $('#'+nodes.formatId('node', id)+'-body', nodes.container);
             if (state != node.hasClass('in')) {
-            	node.collapse(state ? 'show':'hide');
-            	nodes.collapsed[id] = !state;
+                node.collapse(state ? 'show':'hide');
+                nodes.collapsed[id] = !state;
             }
         }
     },
@@ -516,10 +533,10 @@ var nodes = {
     },
 
     registerActionEvents: function() {
-    	$('.node-actions .node-select', nodes.container).on('click', function(e) {
+        $('.node-actions .node-select', nodes.container).on('click', function(e) {
             var state = $(this).find('input').prop('checked')
             if (state) {
-                nodes.expand(state);
+                nodes.expandAll(state);
             }
             nodes.selectAll(state);
         });
@@ -528,7 +545,7 @@ var nodes = {
             if (typeof type !== 'undefined') {
                 if (type == 'expand') {
                     var expand = !$(this).data('expand');
-                    nodes.expand(expand);
+                    nodes.expandAll(expand);
                 }
             }
         });
@@ -595,9 +612,9 @@ var nodes = {
             
             var collapsed = 0;
             for (id in nodes.collapsed) {
-            	if (nodes.collapsed[id]) collapsed++;
+                if (nodes.collapsed[id]) collapsed++;
             }
-        	nodes.drawExpand(collapsed == 0);
+            nodes.expand(collapsed == 0);
         });
     }
 }

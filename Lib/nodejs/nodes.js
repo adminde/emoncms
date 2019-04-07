@@ -37,8 +37,8 @@ var nodes = {
         });
         
         if (typeof cookies !== 'undefined' && typeof cookies.get === 'function' &&
-        		cookies.contains(nodes.cookie+'_collapsed')) {
-        	nodes.collapsed = JSON.parse(cookies.get(nodes.cookie+'_collapsed'));
+                cookies.contains(nodes.cookie+'_collapsed')) {
+            nodes.collapsed = JSON.parse(cookies.get(nodes.cookie+'_collapsed'));
         }
         
         var actions = "";
@@ -79,22 +79,42 @@ var nodes = {
     },
 
     update: function() {
-        let time = {};
-        for (let id in nodes.body) {
-            let config = nodes.body[id];
-            if (config.type == 'time') {
-                for (let i in items) {
-                    let t = typeof data[id] !== 'undefined' ? data[id] : null;
-                    $(nodes.formatId('item', items[i])+'-'+id, nodes.container)
-                        .html(nodes.formatTime(t));
-                }
-            }
-        }
         for (let id in nodes.header) {
             let config = nodes.header[id];
             if (config.type == 'time') {
-//                status = nodes.getNodeStatus(id, items);
-//                let time = nodes.drawTime(divid, id, config, items, true);
+                for (let nodeid in nodes.items) {
+                    var time = new Date().getTime();
+                    for (let itemid in nodes.items[nodeid]) {
+                        let item = nodes.items[nodeid][itemid];
+                        if (typeof item[id] !== 'undefined') {
+                            time = Math.min(time, item[id]);
+                        }
+                    }
+                    let divid = nodes.formatId('node', nodeid);
+                    $('#'+divid+' .node-item', nodes.container)
+                        .removeClass('status-danger')
+                        .removeClass('status-warning')
+                        .removeClass('status-success')
+                        .removeClass('status-info')
+                        .addClass(nodes.getNodeStatus(id, nodes.items[nodeid]));
+                    
+                    $('#'+divid+'-time', nodes.container)
+                        .html(nodes.formatTime(time));
+                }
+            }
+        }
+        for (let id in nodes.body) {
+            let config = nodes.body[id];
+            if (config.type == 'time') {
+                for (let nodeid in nodes.items) {
+                    for (let itemid in nodes.items[nodeid]) {
+                        let item = nodes.items[nodeid][itemid];
+                        let time = typeof item[id] !== 'undefined' ? item[id] : null;
+                        
+                        $('#'+nodes.formatId('item', itemid)+'-time', nodes.container)
+                            .html(nodes.formatTime(time));
+                    }
+                }
             }
         }
     },
@@ -175,7 +195,7 @@ var nodes = {
         }
         
         $('.node-container', nodes.container).append(
-            "<div class='node' data-id='"+node.id+"'>" +
+            "<div id='"+divid+"' class='node' data-id='"+node.id+"'>" +
                 "<div id='"+divid+"-header' class='node-header' data-toggle='collapse' data-target='#"+divid+"-body'>" +
                     "<div class='node-item "+status+"'>" +
                         header +
@@ -378,11 +398,11 @@ var nodes = {
         expand.prop('title', state ? 'Collapse' : 'Expand');
         
         if (typeof cookies !== 'undefined' && typeof cookies.set === 'function') {
-        	if (nodes.expandTimeout != null) {
+            if (nodes.expandTimeout != null) {
                 clearTimeout(nodes.expandTimeout);
-        	}
-        	// Debounce the call to save the current state to a local storage cookie
-        	nodes.expandTimeout = setTimeout(function() {
+            }
+            // Debounce the call to save the current state to a local storage cookie
+            nodes.expandTimeout = setTimeout(function() {
                 cookies.set(nodes.cookie+'_collapsed', JSON.stringify(nodes.collapsed))
             }, 100)
         }

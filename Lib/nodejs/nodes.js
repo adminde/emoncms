@@ -582,6 +582,17 @@ var nodes = {
             $("#"+id+"-icon").show();
             $("#"+id+"-select").hide();
         });
+        $(".node-header .node-item > div").off('click').on("click", function(e) {
+            var type = $(this).data('type');
+            if (typeof type !== 'undefined' && typeof nodes.header[type].event === 'function') {
+                e.stopPropagation();
+                
+                var nodeid = $(this).closest('.node').data('id');
+                var node = nodes.groups[nodeid];
+                
+                nodes.header[type].event(node);
+            }
+        });
         $(".node-header .node-collapse input").off('click').on('click', function(e) {
             e.stopPropagation();
             
@@ -589,6 +600,18 @@ var nodes = {
             var state = $(this).prop('checked');
             
             nodes.selectNode(id, state);
+        });
+        $(".node-body .node-item > div").off('click').on("click", function(e) {
+            var type = $(this).data('type');
+            if (typeof type !== 'undefined' && typeof nodes.body[type].event === 'function') {
+                e.stopPropagation();
+                
+                var nodeid = $(this).closest('.node').data('id');
+                var itemid = $(this).closest('.node-item').data('id');
+                var item = nodes.items[nodeid][itemid];
+                
+                nodes.body[type].event(item);
+            }
         });
         $(".node-body .node-select input").off('click').on('click', function(e) {
             e.stopPropagation();

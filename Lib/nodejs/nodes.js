@@ -83,25 +83,29 @@ var nodes = {
             let config = nodes.header[id];
             if (config.type == 'time') {
                 for (let nodeid in nodes.items) {
-                	if (Object.keys(nodes.items[nodeid]).length == 0) {
-                		continue;
-                	}
+                    if (Object.keys(nodes.items[nodeid]).length == 0) {
+                        continue;
+                    }
                     let time = null;
                     for (let itemid in nodes.items[nodeid]) {
                         let item = nodes.items[nodeid][itemid];
                         if (typeof item[id] !== 'undefined' && item[id] != null) {
-                        	if (time != null) {
+                            if (time != null) {
                                 time = Math.min(time, item[id]);
-                        	}
-                        	else {
-                        		time = item[id];
-                        	}
+                            }
+                            else {
+                                time = item[id];
+                            }
                         }
                     }
                     if (time != null) {
                         let divid = nodes.formatId('node', nodeid);
                         
-                        $('#'+divid+'-time', nodes.container).html(nodes.formatTime(time));
+                        $('#'+divid+'-time', nodes.container)
+                            .html("<span class='item-update'"+(nodes.collapsed[nodeid]?"":" style='display:none'")+">" +
+                                    nodes.formatTime(time) +
+                                "</span>");
+                        
                         $('#'+divid+' .node-item', nodes.container)
                             .removeClass('status-danger')
                             .removeClass('status-warning')
@@ -121,7 +125,7 @@ var nodes = {
                         let time = typeof item[id] !== 'undefined' ? item[id] : null;
                         
                         $('#'+nodes.formatId('item', itemid)+'-time', nodes.container)
-                            .html(nodes.formatTime(time));
+                            .html("<span class='item-update'>"+nodes.formatTime(time)+"</span>");
                     }
                 }
             }
@@ -193,7 +197,7 @@ var nodes = {
             }
             else if (config.type == 'time') {
                 status = nodes.getNodeStatus(id, items);
-                header += nodes.drawTime(divid, id, config, items, true);
+                header += nodes.drawTime(divid, id, config, items, node);
             }
             else if (config.type == 'icon') {
                 header += nodes.drawIcon(divid, id, config);
@@ -273,25 +277,29 @@ var nodes = {
         let type = (typeof config.class !== 'undefined') ? config.class : '';
         let span = "";
         if (node) {
-        	if (Object.keys(data).length > 0) {
-        		let time = null;
+            if (Object.keys(data).length > 0) {
+                let time = null;
                 for (let i in data) {
                     if (typeof data[i][id] !== 'undefined' && data[i][id] != null) {
-                    	if (time != null) {
-                        	time = Math.min(time, data[i][id]);
-                    	}
-                    	else {
-                    		time = data[i][id];
-                    	}
+                        if (time != null) {
+                            time = Math.min(time, data[i][id]);
+                        }
+                        else {
+                            time = data[i][id];
+                        }
                     }
                 }
                 if (time != null) {
-                    span = nodes.formatTime(time);
+                    span = "<span class='item-update'"+(nodes.collapsed[node.id]?"":" style='display:none'")+">" +
+                            nodes.formatTime(time) +
+                        "</span>";
                 }
-        	}
+            }
         }
         else {
-            span = nodes.formatTime(typeof data[id] !== 'undefined' ? data[id] : null);
+            span = "<span class='item-update'>" +
+                    nodes.formatTime(typeof data[id] !== 'undefined' ? data[id] : null) +
+                "</span>";
         }
         return "<div id='"+divid+"-time' class='"+type+"' title='"+title+"' data-type='"+id+"'>"+span+"</div>";
     },
@@ -456,7 +464,7 @@ var nodes = {
         else if (hour > 2) updated = hour.toFixed(0) + " hrs";
         else if (secs > 180) updated = mins.toFixed(0) + " mins";
         
-        return "<span class='item-update'>"+updated+"</span>";
+        return updated;
     },
 
     /**
@@ -660,6 +668,7 @@ var nodes = {
             if (collapse) {
                 $("#"+id+"-icon").removeClass('icon-chevron-down').addClass('icon-chevron-right').show();
                 $("#"+id+"-select").hide();
+                $("#"+id+"-time > span").slideDown(200);
             }
             else {
                 if (nodes.hover) {
@@ -669,6 +678,7 @@ var nodes = {
                     $("#"+id+"-icon").hide();
                     $("#"+id+"-select").show();
                 }
+                $("#"+id+"-time > *").slideUp(200);
             }
             
             var collapsed = 0;

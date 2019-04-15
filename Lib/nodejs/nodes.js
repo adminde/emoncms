@@ -83,23 +83,32 @@ var nodes = {
             let config = nodes.header[id];
             if (config.type == 'time') {
                 for (let nodeid in nodes.items) {
-                    var time = new Date().getTime();
+                	if (Object.keys(nodes.items[nodeid]).length == 0) {
+                		continue;
+                	}
+                    let time = null;
                     for (let itemid in nodes.items[nodeid]) {
                         let item = nodes.items[nodeid][itemid];
-                        if (typeof item[id] !== 'undefined') {
-                            time = Math.min(time, item[id]);
+                        if (typeof item[id] !== 'undefined' && item[id] != null) {
+                        	if (time != null) {
+                                time = Math.min(time, item[id]);
+                        	}
+                        	else {
+                        		time = item[id];
+                        	}
                         }
                     }
-                    let divid = nodes.formatId('node', nodeid);
-                    $('#'+divid+' .node-item', nodes.container)
-                        .removeClass('status-danger')
-                        .removeClass('status-warning')
-                        .removeClass('status-success')
-                        .removeClass('status-info')
-                        .addClass(nodes.getNodeStatus(id, nodes.items[nodeid]));
-                    
-                    $('#'+divid+'-time', nodes.container)
-                        .html(nodes.formatTime(time));
+                    if (time != null) {
+                        let divid = nodes.formatId('node', nodeid);
+                        
+                        $('#'+divid+'-time', nodes.container).html(nodes.formatTime(time));
+                        $('#'+divid+' .node-item', nodes.container)
+                            .removeClass('status-danger')
+                            .removeClass('status-warning')
+                            .removeClass('status-success')
+                            .removeClass('status-info')
+                            .addClass(nodes.getNodeStatus(id, nodes.items[nodeid]));
+                    }
                 }
             }
         }
@@ -256,26 +265,35 @@ var nodes = {
         else if (typeof data[id] !== undefined) {
             text = data[id];
         }
-        return "<div class='"+type+"' title='"+title+"'><span>"+text+"</span></div>";
+        return "<div class='"+type+"' title='"+title+"' data-type='"+id+"'><span>"+text+"</span></div>";
     },
 
     drawTime: function(divid, id, config, data, node=false) {
         let title = (typeof config.title !== 'undefined') ? config.title : 'Update';
         let type = (typeof config.class !== 'undefined') ? config.class : '';
-        let time = new Date().getTime();
+        let span = "";
         if (node) {
-            for (let i in data) {
-                if (typeof data[i][id] !== 'undefined') {
-                    time = Math.min(time, data[i][id]);
+        	if (Object.keys(data).length > 0) {
+        		let time = null;
+                for (let i in data) {
+                    if (typeof data[i][id] !== 'undefined' && data[i][id] != null) {
+                    	if (time != null) {
+                        	time = Math.min(time, data[i][id]);
+                    	}
+                    	else {
+                    		time = data[i][id];
+                    	}
+                    }
                 }
-            }
+                if (time != null) {
+                    span = nodes.formatTime(time);
+                }
+        	}
         }
         else {
-            time = typeof data[id] !== 'undefined' ? data[id] : null;
+            span = nodes.formatTime(typeof data[id] !== 'undefined' ? data[id] : null);
         }
-        return "<div id='"+divid+"-time' class='"+type+"' title='"+title+"' data-type='"+id+"'>" +
-                nodes.formatTime(time) +
-            "</div>";
+        return "<div id='"+divid+"-time' class='"+type+"' title='"+title+"' data-type='"+id+"'>"+span+"</div>";
     },
 
     drawIcon: function(divid, id, config) {
@@ -450,7 +468,7 @@ var nodes = {
      * @return {string} 
      */
     getNodeStatus: function(id, items) {
-        var status = 'status-danger';
+        var status = '';
         var elapsed = -31536000; // Use one year in the future as error threshold
         var missed = 0;
         var now = new Date().getTime();

@@ -265,7 +265,7 @@ var nodes = {
         else if (typeof data[id] !== undefined) {
             text = data[id];
         }
-        return "<div class='"+type+"' title='"+title+"' data-type='"+id+"'><span>"+text+"</span></div>";
+        return "<div id='"+divid+"-"+id+"' class='"+type+"' title='"+title+"' data-type='"+id+"'><span>"+text+"</span></div>";
     },
 
     drawTime: function(divid, id, config, data, node=false) {

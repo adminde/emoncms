@@ -506,7 +506,7 @@ class Feed
 
         if ($field!=null) // if the feed exists
         {
-            $field = preg_replace('/[^\w\s-]/','',$field);
+            $field = preg_replace('/[^\w\s\-]/','',$field);
          
             if ($field=='time' || $field=='value') {
                 $lastvalue = $this->get_timevalue($id);
@@ -864,7 +864,7 @@ class Feed
         }
 
         if (isset($fields->unit)) {
-            if (preg_replace('/[^\p{N}\p{L}_°\/%\s-:]/u','',$fields->unit)!=$fields->unit) return array('success'=>false, 'message'=>'invalid characters in feed unit');
+            if (preg_replace('/[^\p{N}\p{L}_°\/%\s\-:]/u','',$fields->unit)!=$fields->unit) return array('success'=>false, 'message'=>'invalid characters in feed unit');
             if (strlen($fields->unit) > 10) return array('success'=>false, 'message'=>'feed unit too long');
             if ($stmt = $this->mysqli->prepare("UPDATE feeds SET unit = ? WHERE id = ?")) {
                 $stmt->bind_param("si",$fields->unit,$id);
@@ -1122,7 +1122,7 @@ class Feed
                         break;
 
                     case ProcessArg::TEXT:
-                        if (preg_replace('/[^{}\p{N}\p{L}_\s\/.-]/u','',$arg)!=$arg) 
+                        if (preg_replace('/[^{}\p{N}\p{L}_\s\/.\-]/u','',$arg)!=$arg) 
                             return array('success'=>false, 'message'=>'Invalid characters in argx'); 
                         break;
                                                 

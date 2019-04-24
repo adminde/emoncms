@@ -719,7 +719,7 @@ class User
     public function set_timezone($userid,$timezone)
     {
         $userid = (int) $userid;
-        $timezone = preg_replace('/[^\w-.\\/_]/','',$timezone);
+        $timezone = preg_replace('/[^\w\-.\\/_]/','',$timezone);
         
         $stmt = $this->mysqli->prepare("UPDATE users SET timezone = ? WHERE id = ?");
         $stmt->bind_param("si", $timezone, $userid);
@@ -749,14 +749,14 @@ class User
         $userid = (int) $userid;
         if(!$data || $userid < 1) return array('success'=>false, 'message'=>_("Error updating user info"));
 
-        $gravatar = preg_replace('/[^\w\s-.@]/','',$data->gravatar);
-        $name = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$data->name);
-        $location = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$data->location);
-        $timezone = preg_replace('/[^\w-.\\/_]/','',$data->timezone);
-        $bio = preg_replace('/[^\p{N}\p{L}_\s-.]/u','',$data->bio);
-        $language = preg_replace('/[^\w\s-.]/','',$data->language);
-        $tags = isset($data->tags) == false ? '' : preg_replace('/[^{}",:\w\s-.]/','', $data->tags);
-        $startingpage = preg_replace('/[^\p{N}\p{L}_\s-?#=\/]/u','',$data->startingpage);
+        $gravatar = preg_replace('/[^\w\s\-.@]/','',$data->gravatar);
+        $name = preg_replace('/[^\p{N}\p{L}_\s\-.]/u','',$data->name);
+        $location = preg_replace('/[^\p{N}\p{L}_\s\-.]/u','',$data->location);
+        $timezone = preg_replace('/[^\w\-.\\/_]/','',$data->timezone);
+        $bio = preg_replace('/[^\p{N}\p{L}_\s\-.]/u','',$data->bio);
+        $language = preg_replace('/[^\w\s\-.]/','',$data->language);
+        $tags = isset($data->tags) == false ? '' : preg_replace('/[^{}",:\w\s\-.]/','', $data->tags);
+        $startingpage = preg_replace('/[^\p{N}\p{L}_\s\-?#=\/]/u','',$data->startingpage);
         
         $_SESSION['lang'] = !empty($language) ? $language : $default_locale;
         $_SESSION['timezone'] = !empty($timezone) ? $timezone : $default_timezone;

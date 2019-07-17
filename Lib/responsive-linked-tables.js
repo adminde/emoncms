@@ -54,7 +54,7 @@ $(function() {
         // debounce the call to save the current state to a local storage (cookie)
         clearTimeout(save_node_state_timeout)
         save_node_state_timeout = setTimeout(function(){
-            docCookies.setItem(local_cache_key, JSON.stringify(nodes_display))
+            docCookies.setItem(local_cache_key, JSON.stringify(nodes_display));
         },100)
     })
     // record the state change before animation starts
@@ -96,27 +96,31 @@ $(function() {
     })
 
     // @todo: not yet implemented. ui element not chosen on to trigger this action
-        // select or deselect all the checkboxes for a node
-        function selectAllInNode(e){
-            e.preventDefault()
-            e.stopPropagation()
-            $container = $(e.target).parents('.accordion').first()
-            $container.find('.collapse').collapse('show')
-            $inputs = $container.find(':checkbox')
-            $selected = $container.find(':checkbox:checked')
-            // use a custom trigger so not to confuse with the click event
-            // if all selected de-select else select all
-            $inputs.prop('checked', $inputs.length != $selected.length).trigger('select')
-        }
-        // check / clear all selection
-        // $(document).on('click','.input-list .has-indicator', selectAllInNode)
-        
-        // feed list view already makes use of the click event
-        // $(document).on('mouseup','.feed-list .has-indicator', selectAllInNode)
+    // select or deselect all the checkboxes for a node
+    function selectAllInNode(e){
+        e.preventDefault()
+        e.stopPropagation()
+        $container = $(e.target).parents('.accordion').first()
+        $container.find('.collapse').collapse('show')
+        $inputs = $container.find(':checkbox')
+        $selected = $container.find(':checkbox:checked')
+        // use a custom trigger so not to confuse with the click event
+        // if all selected de-select else select all
+        $inputs.prop('checked', $inputs.length != $selected.length).trigger('select')
+    }
+    // check / clear all selection
+    // $(document).on('click','.input-list .has-indicator', selectAllInNode)
+    
+    // feed list view already makes use of the click event
+    // $(document).on('mouseup','.feed-list .has-indicator', selectAllInNode)
 });
 
-// Calculate and format updated time
 function itemUpdateFormat(time) {
+    return "<span class='last-update'>" + itemUpdateString(time) + "</span>";
+}
+
+// Calculate and format updated time
+function itemUpdateString(time) {
     var elapsed = itemElapsedTime(time);
     var secs = Math.abs(elapsed);
     var mins = secs / 60;
@@ -131,7 +135,7 @@ function itemUpdateFormat(time) {
     else if (hour > 2) updated = hour.toFixed(0) + " hrs";
     else if (secs > 180) updated = mins.toFixed(0) + " mins";
     
-    return "<span class='last-update'>" + updated + "</span>";
+    return updated;
 }
 
 /**
@@ -414,45 +418,3 @@ Number.prototype.pad = function(size) {
     }
     return s;
 };
-
-// get/set document cookies
-var docCookies = {
-    getItem: function (sKey) {
-      if (!sKey) { return null; }
-      return decodeURIComponent(document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1")) || null;
-    },
-    setItem: function (sKey, sValue, vEnd, sPath, sDomain, bSecure) {
-      if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) { return false; }
-      var sExpires = "";
-      if (vEnd) {
-        switch (vEnd.constructor) {
-          case Number:
-          //   sExpires = vEnd === Infinity ? "; expires=Fri, 31 Dec 9999 23:59:59 GMT" : "; max-age=" + vEnd;
-            sExpires = vEnd === Infinity ? "; expires=Fri, 31 Dec 9999 23:59:59 GMT" : "; expires=" + (new Date(vEnd * 1e3 + Date.now())).toUTCString();
-            break;
-          case String:
-            sExpires = "; expires=" + vEnd;
-            break;
-          case Date:
-            sExpires = "; expires=" + vEnd.toUTCString();
-            break;
-        }
-      }
-      document.cookie = encodeURIComponent(sKey) + "=" + encodeURIComponent(sValue) + sExpires + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "") + (bSecure ? "; secure" : "");
-      return true;
-    },
-    removeItem: function (sKey, sPath, sDomain) {
-      if (!this.hasItem(sKey)) { return false; }
-      document.cookie = encodeURIComponent(sKey) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT" + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "");
-      return true;
-    },
-    hasItem: function (sKey) {
-      if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) { return false; }
-      return (new RegExp("(?:^|;\\s*)" + encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=")).test(document.cookie);
-    },
-    keys: function () {
-      var aKeys = document.cookie.replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "").split(/\s*(?:\=[^;]*)?;\s*/);
-      for (var nLen = aKeys.length, nIdx = 0; nIdx < nLen; nIdx++) { aKeys[nIdx] = decodeURIComponent(aKeys[nIdx]); }
-      return aKeys;
-    }
-  };

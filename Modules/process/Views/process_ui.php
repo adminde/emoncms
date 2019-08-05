@@ -121,9 +121,9 @@
                                 <div class="btn-group">
                                     <select id="feed-select" class="input-medium" style="border-bottom-right-radius: 0;border-top-right-radius: 0;"></select>
                                     <div class="autocomplete">
-                                        <input id="new-feed-tag" type="text" pattern="[a-zA-Z0-9-_: ]+" required style="width:4em; border-right: none; border-bottom-right-radius: 0; border-top-right-radius: 0;" title="<?php echo dgettext('process_messages','Please enter a feed tag consisting of alphabetical letters, A-Z a-z 0-9 - _ : and spaces'); ?>" placeholder="<?php echo dgettext('process_messages','Tag'); ?>" />
+                                        <input id="new-feed-tag" type="text" pattern="[a-zA-Z0-9-_:/ ]+" required style="width:4em; border-right: none; border-bottom-right-radius: 0; border-top-right-radius: 0;" title="<?php echo dgettext('process_messages','Please enter a feed tag consisting of alphabetical letters, A-Z a-z 0-9 - _ : / and spaces'); ?>" placeholder="<?php echo dgettext('process_messages','Tag'); ?>" />
                                     </div>
-                                    <input id="new-feed-name" type="text" pattern="[a-zA-Z0-9-_: ]+" required style="width:6em" title="<?php echo dgettext('process_messages','Please enter a feed name consisting of alphabetical letters, A-Z a-z 0-9 - _ : and spaces'); ?>" placeholder="<?php echo dgettext('process_messages','Name'); ?>" />
+                                    <input id="new-feed-name" type="text" pattern="[a-zA-Z0-9-_:/ ]+" required style="width:6em" title="<?php echo dgettext('process_messages','Please enter a feed name consisting of alphabetical letters, A-Z a-z 0-9 - _ : / and spaces'); ?>" placeholder="<?php echo dgettext('process_messages','Name'); ?>" />
                                 </div>
                             </div>
                             

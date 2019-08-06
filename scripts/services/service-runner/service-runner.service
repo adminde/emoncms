@@ -17,9 +17,8 @@
 # where -nX is the number of log lines to view
 # journalctl -f -u service-runner
 # Otherwise:
-# Specify
-#StandardOutput=file:/var/log/service-runner.log
-# tail -f /var/log/service-runner.log
+# Specify StandardOutput=file:/var/log/emoncms/service-runner.log
+# tail -f /var/log/emoncms/service-runner.log
 
 ###
 #
@@ -42,7 +41,7 @@ Documentation=https://github.com/emoncms/emoncms/blob/master/scripts/services/in
 # Uncomment this line to use a dedicated log file for StdOut and StdErr.
 # NOTE: only works in systemd v236+
 #       Debain "stretch" includes v232, "buster" includes v239
-#StandardOutput=file:/var/log/service-runner.log
+#StandardOutput=file:/var/log/emoncms/service-runner.log
 
 [Service]
 Type=idle

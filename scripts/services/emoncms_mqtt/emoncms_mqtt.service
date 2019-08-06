@@ -17,9 +17,8 @@
 # where -nX is the number of log lines to view 
 # sudo journalctl -f -u emoncms_mqtt
 # Otherwise:
-# Specify
-#StandardOutput=file:/var/log/emoncms_mqtt.log
-# tail -f /var/log/emoncms_mqtt.log
+# Specify StandardOutput=file:/var/log/emoncms/emoncms_mqtt.log
+# tail -f /var/log/emoncms/emoncms_mqtt.log
 
 ###
 #
@@ -41,20 +40,11 @@ Documentation=https://github.com/emoncms/emoncms/blob/master/docs/RaspberryPi/MQ
 # Uncomment this line to use a dedicated log file for StdOut and StdErr.
 # NOTE: only works in systemd v236+
 #       Debain "stretch" includes v232, "buster" includes v239
-#StandardOutput=file:/var/log/emoncms_mqtt.log
+StandardOutput=file:/var/log/emoncms/emoncms_mqtt.log
 
 [Service]
 Type=idle
 ExecStart=/usr/bin/php /var/www/emoncms/scripts/services/emoncms_mqtt/emoncms_mqtt.php
-
-# Setup log folder if it does not exist
-# To be loaded from EnvironmentFile in future
-Environment='LOG_PATH=/var/log/emoncms'
-PermissionsStartOnly=true
-ExecStartPre=/bin/mkdir -p ${LOG_PATH}
-ExecStartPre=/bin/chown pi ${LOG_PATH}
-ExecStartPre=/bin/touch ${LOG_PATH}/emoncms.log
-ExecStartPre=/bin/chmod 666 ${LOG_PATH}/emoncms.log
 
 # Restart script if stopped on a failure. Will not restart if not configured correctly
 Restart=on-failure

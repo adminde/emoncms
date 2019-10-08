@@ -1,7 +1,9 @@
 <?php
     defined('EMONCMS_EXEC') or die('Restricted access');
-    global $path, $feed_settings, $redis_enabled, $default_emailto;
+    global $path, $settings;
     load_language_files("Modules/process/locale", "process_messages");
+    
+    $v=6;
 ?>
 <style>
   .modal-processlist {
@@ -23,12 +25,12 @@
 
 </style>
 <script type="text/javascript"><?php require "Modules/process/process_langjs.php"; ?></script>
-<script type="text/javascript" src="<?php echo $path; ?>Modules/process/Views/process_ui.js"></script>
-<script type="text/javascript" src="<?php echo $path; ?>Lib/misc/autocomplete.js"></script>
-<link rel="stylesheet" href="<?php echo $path; ?>Lib/misc/autocomplete.css">
+<script type="text/javascript" src="<?php echo $path; ?>Modules/process/Views/process_ui.js?v=<?php echo $v; ?>"></script>
+<script type="text/javascript" src="<?php echo $path; ?>Lib/misc/autocomplete.js?v=<?php echo $v; ?>"></script>
+<link rel="stylesheet" href="<?php echo $path; ?>Lib/misc/autocomplete.css?v=<?php echo $v; ?>">
 <script>
-  processlist_ui.engines_hidden = <?php echo json_encode($feed_settings['engines_hidden']); ?>;
-  <?php if ($redis_enabled) echo "processlist_ui.has_redis = 1;"; ?>
+  processlist_ui.engines_hidden = <?php echo json_encode($settings["feed"]['engines_hidden']); ?>;
+  <?php if ($settings["redis"]["enabled"]) echo "processlist_ui.has_redis = 1;"; ?>
 
   $(window).resize(function(){
     processlist_ui.adjustmodal() 
@@ -115,11 +117,12 @@
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="input-prepend">
                                 <span class="add-on feed-select-label"><?php echo dgettext('process_messages','Feed'); ?></span>
                                 <div class="btn-group">
                                     <select id="feed-select" class="input-medium" style="border-bottom-right-radius: 0;border-top-right-radius: 0;"></select>
+
                                     <div class="autocomplete">
                                         <input id="new-feed-tag" type="text" pattern="[a-zA-Z0-9-_:/ ]+" required style="width:4em; border-right: none; border-bottom-right-radius: 0; border-top-right-radius: 0;" title="<?php echo dgettext('process_messages','Please enter a feed tag consisting of alphabetical letters, A-Z a-z 0-9 - _ : / and spaces'); ?>" placeholder="<?php echo dgettext('process_messages','Tag'); ?>" />
                                     </div>
@@ -131,7 +134,7 @@
                                 <span class="add-on feed-engine-label"><?php echo dgettext('process_messages','Engine'); ?></span>
                                 <div class="btn-group">
                                     <select id="feed-engine" class="input-medium">
-                                        <?php // All supported engines must be here, add to engines_hidden array in settings.php to hide them from user ?>
+<?php // All supported engines must be here, add to engines_hidden array in settings.php to hide them from user ?>
                                         <option value="6">PHPFIWA Fixed Interval With Averaging</option>
                                         <option value="5">PHPFINA Fixed Interval No Averaging</option>
                                         <option value="2">PHPTIMESERIES Variable Interval No Averaging</option>
@@ -139,6 +142,7 @@
                                         <option value="8">MYSQL Memory (RAM data lost on power off)</option>
                                         <option value="10">CASSANDRA TimeSeries</option>
                                     </select>
+
                                     <select id="feed-interval" class="input-mini">
                                         <option value=""><?php echo dgettext('process_messages','Select interval'); ?></option>
                                         <option value="5">5<?php echo dgettext('process_messages','s'); ?></option>
@@ -156,9 +160,6 @@
                                         <option value="3600">1<?php echo dgettext('process_messages','h'); ?></option>
                                         <option value="86400">1<?php echo dgettext('process_messages','d'); ?></option>
                                     </select>
-                                    <?php if (isset($feed_settings["mysql"]) && isset($feed_settings["mysql"]["generic"]) && !$feed_settings["mysql"]["generic"]) { ?>
-                                    <input id="feed-table" type="text" pattern="[a-zA-Z0-9_]+" style="width:6em" title="<?php echo dgettext('process_messages','Please enter a table name consisting of alphabetical letters, A-Z a-z 0-9 and _ characters'); ?>" placeholder="<?php echo dgettext('process_messages','Table'); ?>" />
-                                    <?php } ?>
                                 </div>
                             </div>
                         </span>

@@ -48,8 +48,8 @@ if (!in_array($settings["interface"]["themecolor"], ["blue", "sun", "standard"])
     <div id="wrap">
         <div id="emoncms-navbar" class="navbar navbar-inverse navbar-fixed-top">
             <?php echo $mainmenu; ?>
-
         </div>
+
         <?php if (isset($submenu) && ($submenu)) { ?>
 
         <div id="submenu">

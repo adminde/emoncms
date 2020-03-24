@@ -113,12 +113,12 @@ class Feed
             $this->log->error("Engine id '".$engine."' is not supported.");
             return array('success'=>false, 'message'=>"ABORTED: Engine id $engine is not supported.");
         }
-
+        
         // If feed of given name by the user already exists
         if ($this->exists_tag_name($userid,$tag,$name)) return array('success'=>false, 'message'=>'feed already exists');
-
+        
         // Histogram engine requires MYSQL
-        if ($datatype==DataType::HISTOGRAM && $engine!=Engine::MYSQL) $engine = Engine::MYSQL;
+        if ($engine != Engine::MYSQL && $datatype == DataType::HISTOGRAM) $engine = Engine::MYSQL;
         
         $options = array();
         if ($engine == Engine::MYSQL || $engine == Engine::MYSQLMEMORY) {
@@ -128,13 +128,9 @@ class Feed
         }
         else if ($engine == Engine::PHPFINA) $options['interval'] = (int) $options_in->interval;
         else if ($engine == Engine::PHPFIWA) $options['interval'] = (int) $options_in->interval;
-        $options_out = null;
-        if (count($options) > 0) {
-            $options_out = preg_replace('/[\{\}\"\\\\]/u', '', json_encode($options));
-        }
         
-        $stmt = $this->mysqli->prepare("INSERT INTO feeds (userid,tag,name,datatype,public,engine,options,unit) VALUES (?,?,?,?,?,?,?,?)");
-        $stmt->bind_param("issiiiss",$userid,$tag,$name,$datatype,$public,$engine,$options_out,$unit);
+        $stmt = $this->mysqli->prepare("INSERT INTO feeds (userid,tag,name,datatype,public,engine,unit) VALUES (?,?,?,?,?,?,?)");
+        $stmt->bind_param("issiiis",$userid,$tag,$name,$datatype,$public,$engine,$unit);
         $stmt->execute();
         $stmt->close();
         
@@ -242,6 +238,11 @@ class Feed
 
         // Call to engine clear method
         $response = $this->EngineClass($engine)->clear($feedid);
+        
+        // Clear feed last value (set to zero)
+        if ($this->redis->hExists("feed:$feedid",'value')) {
+            $lastvalue = $this->redis->hset("feed:$feedid",'value',0);
+        }
 
         $this->log->info("feed model: clear() feedid=$feedid");
         return $response;
@@ -586,7 +587,7 @@ class Feed
         // Call to engine get_data
         $data = $this->EngineClass($engine)->get_data($feedid,$start,$end,$outinterval,$skipmissing,$limitinterval);
 
-        if ($this->settings['redisbuffer']['enabled']) {
+        if ($this->settings['redisbuffer']['enabled'] && !isset($data["success"])) {
             // Add redisbuffer cache if available
             if ($engine==Engine::PHPFINA || $engine==Engine::PHPTIMESERIES) $bufferstart=$start; else $bufferstart=end($data)[0];
             
@@ -688,7 +689,7 @@ class Feed
 
         // Download limit
         $downloadsize = (($end - $start) / $outinterval) * 17; // 17 bytes per dp
-        if ($downloadsize>($this->settings['csvdownloadlimit_mb']*1048576)) {
+        if ($downloadsize>($this->settings['csv_downloadlimit_mb']*1048576)) {
             $this->log->warn("csv_export() CSV download limit exeeded downloadsize=$downloadsize feedid=$feedid");
             return array('success'=>false, 'message'=>"CSV download limit exeeded downloadsize=$downloadsize");
         }
@@ -749,8 +750,6 @@ class Feed
         // Basic name input sanitisation
         $name = preg_replace('/[^\p{N}\p{L}\-\_\.\:\/\s]/u','',$name);
         
-        global $settings;
-        
         $exportdata = $this->csv_export_multi_prepare($feedids,$start,$end,$outinterval);
         if (isset($exportdata['success']) && !$exportdata['success']) return $exportdata;
 
@@ -794,7 +793,7 @@ class Feed
                 if ($firstline) {
                     $dataline[$feedid] = $data[$feedid];
                 } else if (isset($data[$feedid])) {
-                    $dataline[$feedid] = number_format((float)$data[$feedid],$settings["csv"]["decimal_places"],$settings["csv"]["decimal_place_separator"],'');
+                    $dataline[$feedid] = number_format((float)$data[$feedid],$this->settings['csv_decimal_places'],$this->settings['csv_decimal_place_separator'],'');
                 } else {
                     $dataline[$feedid] = "";
                 }
@@ -802,7 +801,7 @@ class Feed
             if (!$firstline) {
                 $time = $helperclass->getTimeZoneFormated($time,$usertimezone);
             }
-            fputcsv($fh, array($time)+$dataline,$settings["csv"]["field_separator"]);
+            fputcsv($fh, array($time)+$dataline,$this->settings['csv_field_separator']);
             $firstline = false;
         }
         fclose($fh);
@@ -858,7 +857,9 @@ class Feed
         }
 
         if (isset($fields->unit)) {
-            if (preg_replace('/[^\p{N}\p{L}_°\/%\s\-:]/u','',$fields->unit)!=$fields->unit) return array('success'=>false, 'message'=>'invalid characters in feed unit');
+        if ($fields->unit !== filter_var($fields->unit, FILTER_SANITIZE_STRING, FILTER_FLAG_STRIP_BACKTICK | FILTER_FLAG_NO_ENCODE_QUOTES | FILTER_FLAG_STRIP_LOW)) {
+            return array('success'=>false, 'message'=>'invalid characters in feed unit');
+        }
             if (strlen($fields->unit) > 10) return array('success'=>false, 'message'=>'feed unit too long');
             if ($stmt = $this->mysqli->prepare("UPDATE feeds SET unit = ? WHERE id = ?")) {
                 $stmt->bind_param("si",$fields->unit,$id);
@@ -924,7 +925,7 @@ class Feed
         return $value;
     }
 
-    public function update_data($feedid,$updatetime,$feedtime,$value)
+    public function update_data($feedid,$updatetime,$feedtime,$value,$skipbuffer=false)
     {
         $feedid = (int) $feedid;
         if (!$this->exist($feedid)) return array('success'=>false, 'message'=>'Feed does not exist');
@@ -935,7 +936,7 @@ class Feed
         $value = floatval($value);
 
         $engine = $this->get_engine($feedid);
-        if ($this->settings['redisbuffer']['enabled']) {
+        if ($this->settings['redisbuffer']['enabled'] && !$skipbuffer) {
             // Call to buffer update
             $args = array('engine'=>$engine,'updatetime'=>$updatetime);
             $this->EngineClass(Engine::REDISBUFFER)->update($feedid,$feedtime,$value,$args);

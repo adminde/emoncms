@@ -195,19 +195,19 @@ body{padding:0!important}
         <h3 id="feedEditModalLabel"><?php echo _('Edit feed'); ?></h3>
     </div>
     <div class="modal-body">
-        <p>Feed node:<br>
+        <p><?php echo _('Feed node:'); ?><br>
         <div class="autocomplete">
             <input id="feed-node" type="text" style="margin-bottom:0">
         </div>
         </p>
 
-        <p>Feed name:<br>
+        <p><?php echo _('Feed name:'); ?><br>
         <input id="feed-name" type="text"></p>
 
-        <p>Make feed public: 
+        <p><?php echo _('Make feed public:'); ?>
         <input id="feed-public" type="checkbox"></p>
 
-        <p>Feed Unit</p>
+        <p><?php echo _('Feed Unit'); ?></p>
         <div class="input-prepend">
         <select id="feed_unit_dropdown" style="width:auto">
             <option value=""></option>
@@ -220,7 +220,7 @@ body{padding:0!important}
             }
         }
         ?>
-            <option value="_other">Other</option>
+            <option value="_other"><?php echo _('Other'); ?></option>
         </select>
         <input type="text" id="feed_unit_dropdown_other" style="width:100px"/>
         </div>
@@ -398,12 +398,17 @@ var nodes_display = docCookies.hasItem(local_cache_key) ? JSON.parse(docCookies.
 var feed_engines = ['MYSQL','TIMESTORE','PHPTIMESERIES','GRAPHITE','PHPTIMESTORE','PHPFINA','PHPFIWA','VIRTUAL','MEMORY','REDISBUFFER','CASSANDRA'];
 
 // auto refresh
-update();
-setInterval(update,5000);
+update_feed_list();
+setInterval(update_feed_list,5000);
 
 var firstLoad = true;
-function update() {
+function update_feed_list() {
     $.ajax({ url: path+"feed/list.json", dataType: 'json', async: true, success: function(data) {
+    
+        if (data.message!=undefined && data.message=="Username or password empty") {
+            window.location.href = "/";
+            return false;
+        }
     
         // Show/hide no feeds alert
         $('#feed-loader').hide();
@@ -540,7 +545,7 @@ function update() {
         autowidth($container) // set each column group to the same width
         } // end of for loop
     }); // end of ajax callback
-}// end of update() function
+}// end of update_feed_list() function
 
 // stop checkbox form opening graph view
 $("#table").on("click",".tbody .select",function(e) {
@@ -713,7 +718,7 @@ $("#feed-edit-save").click(function() {
                     $('#feed-edit-save-message').text(response.message).fadeIn();
                 } else {
                     // ok
-                    update();
+                    update_feed_list();
                     $('#feedEditModal').modal('hide');
                     $('#feed-edit-save-message').text('').hide();
                 }
@@ -1109,8 +1114,8 @@ function enableTrim(start_time){
                         }
                     }
                     $("#feedDelete-loader").stop().fadeOut();
-                    update();
-                    updaterStart(update, 5000);
+                    update_feed_list();
+                    updaterStart(update_feed_list, 5000);
                 }
             }
         });
@@ -1214,8 +1219,8 @@ function enableClear(){
                     }
                 }
                 $("#feedDelete-loader").stop().fadeOut();
-                update();
-                updaterStart(update, 5000);
+                update_feed_list();
+                updaterStart(update_feed_list, 5000);
             }
         });
 }
@@ -1237,16 +1242,18 @@ $("#feedDelete-confirm").click(function(){
                 updateFeedDeleteModalMessage(response);
             }
         }
+        
         setTimeout(function() {
-            update();
-            updaterStart(update, 5000);
+            update_feed_list();
+            updaterStart(update_feed_list, 5000);
             $('#feedDeleteModal').modal('hide');
+            feed_selection();
         }, 5000);
     }
 });
 
 $("#refreshfeedsize").click(function(){
-    $.ajax({ url: path+"feed/updatesize.json", async: true, success: function(data){ update(); alert('<?php echo addslashes(_("Total size of used space for feeds:")); ?>' + list_format_size(data)); } });
+    $.ajax({ url: path+"feed/updatesize.json", async: true, success: function(data){ update_feed_list(); alert('<?php echo addslashes(_("Total size of used space for feeds:")); ?>' + list_format_size(data)); } });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -1305,7 +1312,7 @@ $("#newfeed-save").click(function (){
         alert('ERROR: Feed could not be created. '+result.message);
         return false;
     } else {
-        update(); 
+        update_feed_list(); 
         $('#newFeedNameModal').modal('hide');
     }
 });

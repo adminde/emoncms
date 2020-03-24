@@ -89,6 +89,7 @@ $settings = array(
     'virtualfeed'   => array('data_sampling' => false),
     'mysqltimeseries' => array(
         'data_sampling' => false,
+        'datadir'       => isset($feed_settings["mysql"]["datadir"])?$feed_settings["mysql"]["datadir"]:'',
         'prefix'        => isset($feed_settings["mysql"]["prefix"])?$feed_settings["mysql"]["prefix"]:'feed_',
         'generic'       => isset($feed_settings["mysql"]["generic"])?$feed_settings["mysql"]["generic"]:true,
         'database'      => isset($feed_settings["mysql"]["database"])?$feed_settings["mysql"]["database"]:null,
@@ -189,8 +190,9 @@ $settings = array(
     'host'=>isset($smtp_email_settings["host"])?$smtp_email_settings["host"]:"smtp.gmail.com",
     // 25, 465, 587
     'port'=>isset($smtp_email_settings["port"])?$smtp_email_settings["port"]:"465",  
-    'from_email' => 'noreply@emoncms.org',
-    'from_name' => 'EmonCMS',
+    'from_email' =>isset($smtp_email_settings["from_email"])?$smtp_email_settings["from_email"]:'noreply@emoncms.org',
+    'from_name' =>isset($smtp_email_settings["from_name"])?$smtp_email_settings["from_name"]:'EmonCMS',
+
     // comment lines below that dont apply
     // ssl, tls
     'encryption'=>isset($smtp_email_settings["encryption"])?$smtp_email_settings["encryption"]:"ssl", 

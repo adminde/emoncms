@@ -63,12 +63,12 @@ $_settings = array(
     // Place a ',' as the first character on all uncommented engines lines but first.
     // If using emoncms in low-write mode, ensure that PHPFIWA is disabled by removing the leading //, from the PHPFIWA entry
     'engines_hidden'=>array(
-    // Engine::MYSQL         // 0  Mysql traditional
-    //,Engine::MYSQLMEMORY   // 8  Mysql with MEMORY tables on RAM. All data is lost on shutdown
+     Engine::MYSQL         // 0  Mysql traditional
+    ,Engine::MYSQLMEMORY   // 8  Mysql with MEMORY tables on RAM. All data is lost on shutdown
     //,Engine::PHPTIMESERIES // 2
     //,Engine::PHPFINA      // 5
-    //,Engine::PHPFIWA      // 6
-    //,Engine::CASSANDRA    // 10 Apache Cassandra
+    ,Engine::PHPFIWA      // 6
+    ,Engine::CASSANDRA    // 10 Apache Cassandra
     ),
 
     // Redis Low-write mode
@@ -76,7 +76,7 @@ $_settings = array(
         // If enabled is true, requires redis enabled and feedwriter service running
         'enabled' => false,
         // Number of seconds to wait before write buffer to disk - user selectable option
-        'sleep' => 600
+        'sleep' => 60
     ),   
     
     // Engines working folder. Default is /var/lib/phpfiwa,phpfina,phptimeseries
@@ -178,18 +178,18 @@ $_settings = array(
 // (OPTIONAL) Email SMTP, used for password reset or other email functions
 "smtp"=>array(
     // Email address to email proccessed input values
-    'default_emailto' => 'root@localhost',
+    'default_emailto' => '',
     
-    'host'=>"smtp.gmail.com",
+    'host'=>"",
     // 25, 465, 587
-    'port'=>"465",  
-    'from_email' => 'noreply@emoncms.org',
-    'from_name' => 'EmonCMS',
+    'port'=>"",  
+    'from_email' => '',
+    'from_name' => '',
     // comment lines below that dont apply
     // ssl, tls
-    'encryption'=>"ssl", 
-    'username'=>"yourusername@gmail.com",
-    'password'=>"yourpassword"
+    'encryption'=>"", 
+    'username'=>"",
+    'password'=>""
 ),
 
 // Log file configuration
@@ -200,5 +200,11 @@ $_settings = array(
     "location" => "/var/log/emoncms",
     // Log Level: 1=INFO, 2=WARN, 3=ERROR
     "level" => 2
-)
+),
+
+"device"=>array(
+    "enable_UDP_broadcast" => true
+),
+
+"cydynni"=>array()
 );

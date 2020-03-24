@@ -382,7 +382,7 @@ class User
 
         if ($hash != $userData_password)
         {
-            return array('success'=>false, 'message'=>_("Incorrect password, if your sure its correct try clearing your browser cache"));
+            return array('success'=>false, 'message'=>_("Incorrect password, if you're sure it's correct try clearing your browser cache"));
         }
         else
         {
@@ -520,6 +520,7 @@ class User
                 $email->body("<p>A password reset was requested for your ".$this->appname." account.</p><p>You can now login with password: $newpass </p>");
                 $result = $email->send();
                 if (!$result['success']) {
+                    return array('success'=>false, 'message'=>$result['message']);
                     $this->log->error("Email send returned error. emailto=" . $emailto . " message='" . $result['message'] . "'");
                 } else {
                     $this->log->info("Email sent to $emailto");
@@ -530,10 +531,12 @@ class User
                     $stmt->close();
                     return array('success'=>true, 'message'=>"Password recovery email sent!");
                 }                
+            } else {
+                return array('success'=>false, 'message'=>"Password reset disabled");
             }
+        } else {
+            return array('success'=>false, 'message'=>"Invalid username or email");
         }
-
-        return array('success'=>false, 'message'=>"An error occured");
     }
 
     public function change_username($userid, $username)

@@ -3,10 +3,11 @@ include_once dirname(__FILE__) . '/shared_helper.php';
 
 class MysqlTimeSeries implements engine_methods
 {
+    protected $dir = '';
     protected $generic = true;
     protected $prefix = "feed_";
     protected $mysqli;
-    protected $redis; 
+    protected $redis;
     protected $log;
     private $writebuffer = array();
 
@@ -17,6 +18,9 @@ class MysqlTimeSeries implements engine_methods
     */
     public function __construct($mysqli, $redis=false, $settings=array()) {
         $this->log = new EmonLogger(__FILE__);
+        if (isset($settings['datadir'])) {
+            $this->dir = $settings['datadir'];
+        }
         if (isset($settings['database'])) {
             $database = $settings['database'];
             
@@ -49,7 +53,7 @@ class MysqlTimeSeries implements engine_methods
         if (isset($settings['prefix'])) {
             $this->prefix = $settings['prefix'];
         }
-        if (isset($settings['generic']) && !$settings['generic']) {
+        if (isset($settings['generic'])) {
             $this->generic = $settings['generic'];
         }
     }
@@ -59,12 +63,16 @@ class MysqlTimeSeries implements engine_methods
     /**
      * Create feed
      *
-     * @param integer $id The id of the feed to be created
+     * @param integer $feedid The id of the feed to be created
      * @param array $options for the engine
     */
-    public function create($id, $options)
+    public function create($feedid, $options)
     {
-        $table = $this->get_table(intval($id));
+        $result = $this->create_meta($feedid, $options);
+        if (is_string($result)) {
+            return $result;
+        }
+        $table = $this->get_table(intval($feedid));
         $name = $table['name'];
         $type = $table['type'];
         
@@ -72,98 +80,148 @@ class MysqlTimeSeries implements engine_methods
         return true;
     }
 
-    /**
-     * Delete feed
-     *
-     * @param integer $id The id of the feed to be created
-    */
-    public function delete($id)
+    private function create_meta($feedid, $options)
     {
-        $table = $this->get_table_name(intval($id));
-        $this->mysqli->query("DROP TABLE $table");
+        // Check to ensure ne existing feed will be overridden
+        if (empty($this->dir) || !is_dir($this->dir) || !is_writable($this->dir)) {
+            return true;
+        }
+        else if (file_exists($this->dir.$feedid.".meta")) {
+            $result = "Unable to create MySQL already existing meta file '".$this->dir.$feedid.".meta'";
+            $this->log->error($result);
+            return $result;
+        }
+        if ($this->generic) {
+            $name = ($this->prefix ? $this->prefix : "").trim($feedid);
+            $type = "FLOAT";
+            $empty = false;
+        }
+        else {
+            $name = "";
+            if ($this->prefix) {
+                $name .= $this->prefix;
+            }
+            if (empty($options["name"])) {
+                $name .= "".trim($feedid);
+            }
+            else {
+                $name .= preg_replace('/[^\p{N}\p{L}\_]/u', '_', $options['name']);
+            }
+            $type = !empty($options['type']) ? $options['type'] : "FLOAT";
+            $empty = isset($options['empty']) && boolval($options['empty']);
+        }
+        // Set initial feed meta data
+        $meta = new stdClass();
+        $meta->table_name = $name;
+        $meta->value_type = $type;
+        $meta->value_empty = $empty;
+        $meta->start_time = 0;
+        
+        // Save meta data
+        $result = $this->write_meta($feedid, $meta);
+        if ($result !== true) {
+            return $result;
+        }
+        if (!file_exists($this->dir.$feedid.".meta")) {
+            $this->log->error("Creating MySQL meta data failed. Unable to find file '".$this->dir.$feedid.".meta'");
+            return $result;
+        }
+        return $meta;
+    }
+
+    private function write_meta($feedid, $meta)
+    {
+        $file = $feedid.".meta";
+        if (!is_dir($this->dir) || !is_writable($this->dir) ||
+            (is_file($this->dir.$file) and !is_writable($this->dir.$file))) {
+                $result = "unable to write meta data file: ".$this->dir.$file;
+                $this->log->error("write_meta() ".$result);
+                return $result;
+        }
+        
+        $meta_file = @fopen($this->dir.$file, 'w');
+        if (!$meta_file) {
+            $error = error_get_last();
+            $result = "could not write meta data file ".$error['message'];
+            $this->log->error("write_meta() ".$result);
+            return $result;
+        }
+        if (!flock($meta_file, LOCK_EX)) {
+            $result = "meta data file '".$this->dir.$file."' is locked by another process";
+            $this->log->error("write_meta() ".$result);
+            fclose($meta_file);
+            return $result;
+        }
+        foreach ($meta as $key => $value) {
+            if (is_bool($value)) $value = $value ? 'true' : false;
+            fwrite($meta_file, $key.'='.$value.PHP_EOL);
+        }
+        fclose($meta_file);
+        return true;
     }
 
     /**
      * Gets engine metadata
      *
-     * @param integer $id The id of the feed to be created
+     * @param integer $feedid The id of the feed to be created
     */
-    public function get_meta($id)
+    public function get_meta($feedid)
     {
-        $id= intval($id);
-        $meta = new stdClass();
-        $meta->id = $id;
-        $meta->start_time = 0;
-        $meta->nlayers = 1;
-        $meta->npoints = -1;
-        $meta->interval = 1;
+        $feedid= intval($feedid);
+        if (!$this->generic) {
+            $meta = $this->read_meta($feedid);
+        }
+        else {
+            $meta = new stdClass();
+            $meta->table_name = ($this->prefix ? $this->prefix : "").trim($feedid);
+            $meta->value_type = "FLOAT NOT NULL";
+            $meta->start_time = 0;
+        }
+        if ($meta->start_time == 0) {
+            $result = $this->mysqli->query("SELECT time FROM ".$meta->table_name." ORDER BY time ASC LIMIT 1");
+            if ($result && $row = $result->fetch_array()) {
+                $meta->start_time = (int) $row['time'];
+                
+                if (!$this->generic) {
+                    $this->write_meta($feedid, $meta);
+                }
+            }
+        }
+        $result = $this->mysqli->query("SELECT COUNT(*) FROM ".$meta->table_name);
+        if ($result && $row = $result->fetch_array()) {
+            $meta->npoints = $row[0];
+        }
+        else {
+            $meta->npoints = -1;
+        }
         return $meta;
     }
 
-    /**
-     * Returns engine occupied size in bytes
-     *
-     * @param integer $id The id of the feed to be created
-    */
-    public function get_feed_size($id)
+    private function read_meta($feedid)
     {
-        $table = $this->get_table_name(intval($id));
-        $result = $this->mysqli->query("SHOW TABLE STATUS LIKE '$table'");
-        $row = $result->fetch_array();
-        return $row['Data_length']+$row['Index_length'];
-    }
-
-    /**
-     * Adds a data point to the feed
-     *
-     * @param integer $id The id of the feed to add to
-     * @param integer $time The unix timestamp of the data point, in seconds
-     * @param float $value The value of the data point
-     * @param array arg $value optional padding mode argument
-     * $feedname, $time and $value are all typecased in feed->insert and feed->update
-    */
-    public function post($id, $time, $value, $arg=null)
-    {
-        $table = $this->get_table_name(intval($id));
-        $this->mysqli->query("INSERT INTO $table (time,data) VALUES ('$time','$value') ON DUPLICATE KEY UPDATE data=VALUES(data)");
-    }
-
-    /**
-     * Updates a data point in the feed
-     *
-     * @param integer $id The id of the feed to add to
-     * @param integer $time The unix timestamp of the data point, in seconds
-     * @param float $value The value of the data point
-    */
-    public function update($id, $time, $value)
-    {
-        $id = intval($id);
-        if ($this->writebuffer_update_time($id, (int) $time, $value)) {
-            $this->post_bulk_save();// if data is on buffer, update it and flush buffer now
-            $this->log->info("update() feedid=$id with buffer");
+        $file = "$feedid.meta";
+        if (!file_exists($this->dir.$file)) {
+            $error = "meta file does not exist '".$this->dir.$file."'";
+            $this->log->warn("read_meta() ".$error);
+            throw new Exception($error);
         }
-        else {
-            //$this->log->info("update() feedid=$id");
-            // else, update or insert data value in feed table
-            $table = $this->get_table_name(intval($id));
-            $result = $this->mysqli->query("SELECT * FROM $table WHERE time = '$time'");
-            if (!$result) return $value;
-            
-            $row = $result->fetch_array();
-            if ($row) $this->mysqli->query("UPDATE $table SET data = '$value' WHERE time = '$time'");
-            if (!$row) {$value = 0; $this->mysqli->query("INSERT INTO $table (`time`,`data`) VALUES ('$time','$value')");}
+        
+        $meta_file = parse_ini_file($this->dir.$file, false, INI_SCANNER_TYPED);
+        $meta = new stdClass();
+        foreach ($meta_file as $key => $value) {
+            $meta->$key = $value;
         }
-        return $value;
+        return $meta;
     }
 
     /**
      * Get array with last time and value from a feed
      *
-     * @param integer $id The id of the feed
+     * @param integer $feedid The id of the feed
     */
-    public function lastvalue($id)
+    public function lastvalue($feedid)
     {
-        $table = $this->get_table_name(intval($id));
+        $table = $this->get_table_name(intval($feedid));
         $result = $this->mysqli->query("SELECT time, data FROM $table ORDER BY time Desc LIMIT 1");
         if ($result && $row = $result->fetch_array()) {
             if ($row['data'] !== null) $row['data'] = (float) $row['data'];
@@ -179,11 +237,11 @@ class MysqlTimeSeries implements engine_methods
      * @param integer $limitinterval not implemented
      *
      */
-    public function get_data($id, $start, $end, $interval, $skipmissing, $limitinterval)
+    public function get_data($feedid, $start, $end, $interval, $skipmissing, $limitinterval)
     {
         global $settings;
         
-        $id = intval($id);
+        $feedid = intval($feedid);
         $start = round($start/1000);
         $end = round($end/1000);
         $interval = intval($interval); // time gap in seconds
@@ -194,10 +252,10 @@ class MysqlTimeSeries implements engine_methods
         if ($dp < 1) return false;
         
         // Check if datatype is daily so that select over range is used rather than skip select approach
-        $data_type = $this->get_data_type($id);
+        $data_type = $this->get_data_type($feedid);
         if ($data_type == 2) $dp = 0;
         
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $range = $end - $start; // window duration in seconds
         $data = array();
         $data_time = null;
@@ -257,20 +315,20 @@ class MysqlTimeSeries implements engine_methods
     /**
      * Return datapoints for intervals in the given timerange.
      *
-     * @param integer $id The id of the feed to fetch from
+     * @param integer $feedid The id of the feed to fetch from
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param string $mode The name of the interval. Possible values are: daily, weekly, monthly, annual
      * @param string $timezone The time zone to which the intervals refer
     */
-    public function get_data_DMY($id, $start, $end, $mode, $timezone) 
+    public function get_data_DMY($feedid, $start, $end, $mode, $timezone) 
     {
         if ($mode!="daily" && $mode!="weekly" && $mode!="monthly" && $mode!="annual") return false;
         
-        $id = (int) $id;
+        $feedid = (int) $feedid;
         $start = intval($start/1000);
         $end = intval($end/1000);
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $data = array();
         
         // Set interval based on timezone        
@@ -292,7 +350,7 @@ class MysqlTimeSeries implements engine_methods
         $result = $this->mysqli->query($sql);
         if ($result) {
             $range = $result->fetch_all(MYSQLI_ASSOC);
-            if (count($range) < 2) return array('success'=>false, 'message'=>"Feed $id does not contain enough datapoints yet");;
+            if (count($range) < 2) return array('success'=>false, 'message'=>"Feed $feedid does not contain enough datapoints yet");;
         }
         else {
             return false;
@@ -308,7 +366,7 @@ class MysqlTimeSeries implements engine_methods
             // Limit DB requests to available datapoints in feed
             if ($range[0]['time'] < $time &&  $time < $range[1]['time']) {
                 // get datapoint using interpolation if necessary
-                $data[] = $this->get_datapoint_interpolated($id, $time * 1000);
+                $data[] = $this->get_datapoint_interpolated($feedid, $time * 1000);
             }
             elseif($time > $range[1]['time']) {
                 // return latest feed value
@@ -325,14 +383,14 @@ class MysqlTimeSeries implements engine_methods
         return $data;
     }
     
-    public function get_data_DMY_time_of_day($id, $start, $end, $mode, $timezone, $split) 
+    public function get_data_DMY_time_of_day($feedid, $start, $end, $mode, $timezone, $split) 
     {
         if ($mode!="daily" && $mode!="weekly" && $mode!="monthly" && $mode!="annual") return false;
         
-        $id = (int) $id;
+        $feedid = (int) $feedid;
         $start = intval($start/1000);
         $end = intval($end/1000);
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $data = array();
         $split = json_decode($split);
         if (gettype($split) != "array") return false;
@@ -360,7 +418,7 @@ class MysqlTimeSeries implements engine_methods
         if($result) {
             $range = $result->fetch_all(MYSQLI_ASSOC);
             if (count($range) < 2) {
-                return array('success'=>false, 'message'=>"Feed $id does not contain enough datapoints yet");;
+                return array('success'=>false, 'message'=>"Feed $feedid does not contain enough datapoints yet");;
             }
         }
         else {
@@ -383,7 +441,7 @@ class MysqlTimeSeries implements engine_methods
                 // Limit DB requests to available datapoints in feed
                 if ($range[0]['time'] < $time &&  $time < $range[1]['time']) {
                     // get datapoint using interpolation if necessary
-                    $result = $this->get_datapoint_interpolated($id, $split_time * 1000);
+                    $result = $this->get_datapoint_interpolated($feedid, $split_time * 1000);
                     $value = $result[1];
                 }
                 else {
@@ -401,14 +459,14 @@ class MysqlTimeSeries implements engine_methods
     /**
      * Return datapoint for requested timestamp. If feed does not contain a datapoint for requested timestamp, the value is calculated using linear interpolation.
      *
-     * @param integer $id The id of the feed to fetch from
+     * @param integer $feedid The id of the feed to fetch from
      * @param integer $time The unix timestamp in ms of the requested datapoint
     */     
-    private function get_datapoint_interpolated($id, $time)
+    private function get_datapoint_interpolated($feedid, $time)
     {
-        $id = (int) $id;
+        $feedid = (int) $feedid;
         $time = intval($time/1000);
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $data = array();
         
         // Search for previous and next datapoint
@@ -446,14 +504,14 @@ class MysqlTimeSeries implements engine_methods
     /**
      * Return the averaged data over interval for the given timerange. The returned timestamp denotes the intervals start time. Averaging is performed over all values from time to time+interval.
      *
-     * @param integer $id The id of the feed to fetch from
+     * @param integer $feedid The id of the feed to fetch from
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param integer $interval The number os seconds for each data point to return (used by some engines)
     */ 
-    public function get_average($id, $start, $end, $interval)
+    public function get_average($feedid, $start, $end, $interval)
     {
-        $id = (int) $id;
+        $feedid = (int) $feedid;
         $start = intval($start/1000);
         $end = intval($end/1000);
         $interval= (int) $interval;
@@ -464,7 +522,7 @@ class MysqlTimeSeries implements engine_methods
         $req_dp = round(($end - $start)/$interval);
         if ($req_dp > 10000) return array('success'=>false, 'message'=>"Request datapoint limit reached (10000), increase request interval or time range, requested datapoints = $req_dp");
         
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $data = array();
         
         $sql = "SELECT time, AVG(data) AS data_avg FROM $table WHERE time >= $start AND time < $end GROUP BY FLOOR(time/$interval)";            
@@ -480,20 +538,20 @@ class MysqlTimeSeries implements engine_methods
     /**
      * Return the averaged data over interval for the given timerange. The returned timestamp denotes the intervals start time. Averaging is performed over all values from time to time+interval.
      *
-     * @param integer $id The id of the feed to fetch from
+     * @param integer $feedid The id of the feed to fetch from
      * @param integer $start The unix timestamp in ms of the start of the data range
      * @param integer $end The unix timestamp in ms of the end of the data range
      * @param string $mode The name of the interval. Possible values are: daily, weekly, monthly, annual
      * @param string $timezone The time zone to which the intervals refer
     */     
-    public function get_average_DMY($id, $start, $end, $mode, $timezone)
+    public function get_average_DMY($feedid, $start, $end, $mode, $timezone)
     {
-        $id = (int) $id;
+        $feedid = (int) $feedid;
         if ($mode!="daily" && $mode!="weekly" && $mode!="monthly" && $mode!="annual") return false;
 
         $start = intval($start/1000);
         $end = intval($end/1000);
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $data = array();
         
         // Set interval based on timezone        
@@ -531,14 +589,27 @@ class MysqlTimeSeries implements engine_methods
         return $data;
     }
 
-    public function csv_export($id, $start, $end, $interval, $timezone)
+    /**
+     * Returns engine occupied size in bytes
+     *
+     * @param integer $feedid The id of the feed to be created
+     */
+    public function get_feed_size($feedid)
+    {
+        $table = $this->get_table_name(intval($feedid));
+        $result = $this->mysqli->query("SHOW TABLE STATUS LIKE '$table'");
+        $row = $result->fetch_array();
+        return $row['Data_length']+$row['Index_length'];
+    }
+
+    public function csv_export($feedid, $start, $end, $interval, $timezone)
     {
         global $settings;
         
         require_once "Modules/feed/engine/shared_helper.php";
         $helperclass = new SharedHelper();
         
-        $id = intval($id);
+        $feedid = intval($feedid);
         $start = round($start);
         $end = round($end);
         $interval = intval($interval);
@@ -551,10 +622,10 @@ class MysqlTimeSeries implements engine_methods
         if ($end == 0) $end = time();
         
         // Check if datatype is daily so that select over range is used rather than skip select approach
-        $data_type = $this->get_data_type($id);
+        $data_type = $this->get_data_type($feedid);
         if ($data_type == 2) $dp = 0;
         
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $file = $table.".csv";
         
         // There is no need for the browser to cache the output
@@ -620,10 +691,10 @@ class MysqlTimeSeries implements engine_methods
         exit;
     }
 
-    public function export($id, $start)
+    public function export($feedid, $start)
     {
         // Feed id and start time of feed to export
-        $id = intval($id);
+        $feedid = intval($feedid);
         $start = intval($start) - 1;
         
         // Open database etc here
@@ -634,7 +705,7 @@ class MysqlTimeSeries implements engine_methods
         $block_size = 400;
         $sleep = 80000;
         
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $file = $table.'.csv';
         
         // There is no need for the browser to cache the output
@@ -680,9 +751,9 @@ class MysqlTimeSeries implements engine_methods
         exit;
     }
 
-    public function clear($id) {
-        $id = filter_var($id, FILTER_SANITIZE_NUMBER_INT);
-        $table = $this->get_table_name($id);
+    public function clear($feedid) {
+        $feedid = filter_var($feedid, FILTER_SANITIZE_NUMBER_INT);
+        $table = $this->get_table_name($feedid);
         $sql = "TRUNCATE TABLE $table";
         if (!$this->mysqli->query($sql)) {
             return array('success'=>false,'message'=>"0 rows deleted");
@@ -691,10 +762,10 @@ class MysqlTimeSeries implements engine_methods
         }
     }
 
-    public function trim($id, $start){
-        $id = filter_var ($id, FILTER_SANITIZE_NUMBER_INT);
+    public function trim($feedid, $start){
+        $feedid = filter_var ($feedid, FILTER_SANITIZE_NUMBER_INT);
         $start = filter_var ($start, FILTER_SANITIZE_NUMBER_INT);
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $stmt = $this->mysqli->prepare("DELETE FROM $table WHERE time < ?");
         if (!$stmt) return array('success'=>false,'message'=>"Error accessing database");
         if (!$stmt->bind_param("i", $start)) return array('success'=>false,'message'=>"Error passing parameters to database");
@@ -707,22 +778,65 @@ class MysqlTimeSeries implements engine_methods
         }
     }
 
+    /**
+     * Updates a data point in the feed
+     *
+     * @param integer $feedid The id of the feed to add to
+     * @param integer $time The unix timestamp of the data point, in seconds
+     * @param float $value The value of the data point
+     */
+    public function update($feedid, $time, $value)
+    {
+        $feedid = intval($feedid);
+        if ($this->writebuffer_update_time($feedid, (int) $time, $value)) {
+            $this->post_bulk_save();// if data is on buffer, update it and flush buffer now
+            $this->log->info("update() feedid=$feedid with buffer");
+        }
+        else {
+            //$this->log->info("update() feedid=$feedid");
+            // else, update or insert data value in feed table
+            $table = $this->get_table_name(intval($feedid));
+            $result = $this->mysqli->query("SELECT * FROM $table WHERE time = '$time'");
+            if (!$result) return $value;
+            
+            $row = $result->fetch_array();
+            if ($row) $this->mysqli->query("UPDATE $table SET data = '$value' WHERE time = '$time'");
+            if (!$row) {$value = 0; $this->mysqli->query("INSERT INTO $table (`time`,`data`) VALUES ('$time','$value')");}
+        }
+        return $value;
+    }
+
+    /**
+     * Adds a data point to the feed
+     *
+     * @param integer $feedid The id of the feed to add to
+     * @param integer $time The unix timestamp of the data point, in seconds
+     * @param float $value The value of the data point
+     * @param array arg $value optional padding mode argument
+     * $feedname, $time and $value are all typecased in feed->insert and feed->update
+     */
+    public function post($feedid, $time, $value, $arg=null)
+    {
+        $table = $this->get_table_name(intval($feedid));
+        $this->mysqli->query("INSERT INTO $table (time,data) VALUES ('$time','$value') ON DUPLICATE KEY UPDATE data=VALUES(data)");
+    }
+
     // Above are required methods
     // Below are buffer write methods
 
     // Insert data in post buffer
-    public function post_bulk_prepare($id,$time,$value,$arg=null)
+    public function post_bulk_prepare($feedid,$time,$value,$arg=null)
     {
-        $this->writebuffer[(int)$id][] = array((int)$time,$value);
-        //$this->log->info("post_bulk_prepare() $id, $time, $value, $arg");
+        $this->writebuffer[(int)$feedid][] = array((int)$time,$value);
+        //$this->log->info("post_bulk_prepare() $feedid, $time, $value, $arg");
     }
 
     // Saves post buffer to mysql feed_table, performing bulk inserts instead of an insert for each point
     public function post_bulk_save()
     {
         $stepcnt = 1048576/30; // Data points to save in each insert command limit is max_allowed_packet = 1Mb default ~20-30bytes are used for each data point
-        foreach ($this->writebuffer as $id=>$data) {
-            $table = $this->get_table_name($id);
+        foreach ($this->writebuffer as $feedid=>$data) {
+            $table = $this->get_table_name($feedid);
             $cnt = count($data);
             if ($cnt > 0) {
                 $p = 0; // point
@@ -750,76 +864,84 @@ class MysqlTimeSeries implements engine_methods
 
     // Below engine specific public methods
 
-    public function delete_data_point($id,$time)
+    public function delete_data_point($feedid,$time)
     {
-        $id = intval($id);
+        $feedid = intval($feedid);
         $time = intval($time);
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $this->mysqli->query("DELETE FROM $table where `time` = '$time' LIMIT 1");
     }
 
-    public function delete_data_range($id,$start,$end)
+    public function delete_data_range($feedid,$start,$end)
     {
-        $id = intval($id);
+        $feedid = intval($feedid);
         $start = intval($start/1000.0);
         $end = intval($end/1000.0);
-        $table = $this->get_table_name($id);
+        $table = $this->get_table_name($feedid);
         $this->mysqli->query("DELETE FROM $table where `time` >= '$start' AND `time`<= '$end'");
 
         return true;
     }
 
+    /**
+     * Delete feed
+     *
+     * @param integer $feedid The id of the feed to be created
+     */
+    public function delete($feedid)
+    {
+        $meta = $this->dir."$feedid.meta";
+        if (!file_exists($meta)) {
+            unlink($meta);
+        }
+        $table = $this->get_table_name(intval($feedid));
+        $this->mysqli->query("DROP TABLE $table");
+    }
+
     // Bellow are engine private methods
 
-    private function get_data_type($id)
+    private function get_data_type($feedid)
     {
         if ($this->redis) {
-            return $this->redis->hget("feed:$id", "datatype");
+            return $this->redis->hget("feed:$feedid", "datatype");
         }
         global $mysqli;
-        $result = $mysqli->query("SELECT datatype FROM feeds WHERE `id` = '$id'");
+        $result = $mysqli->query("SELECT datatype FROM feeds WHERE `id` = '$feedid'");
         $row = $result->fetch_array();
         return $row["datatype"];
     }
 
-    private function get_table($id, $field=null)
+    private function get_table($feedid, $field=null)
     {
         if ($this->generic) {
-            return array(
-                "name" => ($this->prefix ? $this->prefix : "").trim($id),
+            $table = array(
+                "name" => ($this->prefix ? $this->prefix : "").trim($feedid),
                 "type" => "FLOAT NOT NULL"
             );
         }
-        else if ($this->redis && $this->redis->exists("feed:$id:table")) {
+        else if ($this->redis && $this->redis->exists("feed:$feedid:table")) {
             if (!empty($field)) {
-                return $this->redis->hget("feed:$id:table", $field);
+                return $this->redis->hget("feed:$feedid:table", $field);
             }
             else {
-                return $this->redis->get("feed:$id:table");
+                return $this->redis->get("feed:$feedid:table");
             }
         }
-        $options = $this->get_table_options($id);
-        $name = "";
-        if ($this->prefix) {
-            $name .= $this->prefix;
-        }
-        if (empty($options['name'])) {
-            $name .= "".trim($id);
-        }
         else {
-            $name .= preg_replace('/[^\p{N}\p{L}\_]/u', '_', $options['name']);
-        }
-        $type = !empty($options['type']) ? $options['type'] : "FLOAT";
-        if (!isset($options['empty']) || boolval($options['empty'])) {
-            $type .= " NOT NULL";
-        }
-        
-        $table = array(
-            "name" => $name,
-            "type" => $type
-        );
-        if ($this->redis) {
-            $this->redis->hMSet("feed:$id:table", $table);
+            $meta = $this->get_meta($feedid);
+            
+            $name = $meta->table_name;
+            $type = $meta->value_type;
+            if (!$meta->value_empty) {
+                $type .= " NOT NULL";
+            }
+            $table = array(
+                "name" => $name,
+                "type" => $type
+            );
+            if ($this->redis) {
+                $this->redis->hMSet("feed:$feedid:table", $table);
+            }
         }
         if (!empty($field)) {
             return $table[$field];
@@ -827,46 +949,30 @@ class MysqlTimeSeries implements engine_methods
         return $table;
     }
 
-    private function get_table_options($id)
+    protected function get_table_name($feedid)
     {
-        global $mysqli;
-        $result = $mysqli->query("SELECT options FROM feeds WHERE `id` = '$id'");
-        $row = $result->fetch_array();
-        
-        $options = array();
-        if (!empty($row["options"])) {
-            foreach(explode(',', $row["options"]) as $o) {
-                $opt = explode(':', $o);
-                $options[$opt[0]] = $opt[1];
-            }
-        }
-        return $options;
-    }
-
-    protected function get_table_name($id)
-    {
-        $id = intval($id);
+        $feedid = intval($feedid);
         $name = "";
         if ($this->prefix) {
             $name .= $this->prefix;
         }
         if ($this->generic) {
-            $name .= "".trim($id);
+            $name .= "".trim($feedid);
         }
         else {
-            $name .= $this->get_table($id, "name");
+            $name .= $this->get_table($feedid, "name");
         }
         return $name;
     }
 
     // Search time in buffer if found update its value and return true 
-    private function writebuffer_update_time($id, $time, $newvalue)
+    private function writebuffer_update_time($feedid, $time, $newvalue)
     {
-       if (isset($this->writebuffer[$id])) {
-           $array=$this->writebuffer[$id];
+       if (isset($this->writebuffer[$feedid])) {
+           $array=$this->writebuffer[$feedid];
            foreach ($array as $key => $val) {
                if ($val[0] === $time) {
-                   $this->writebuffer[$id][$key][1] = $newvalue;
+                   $this->writebuffer[$feedid][$key][1] = $newvalue;
                    return true;
                }
            }

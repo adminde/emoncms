@@ -8,24 +8,24 @@
 */
 
 // logic starts here
-// ----------------------------------------------------------------------
+// -------------------------------------------------------
 // creates all second and third level menus with their associated hierarch
 // built up from each Module's `*_menu.php` file
 // will mark the active menu and any parent menus
+/* EXAMPLE MARKUP OF A SINGLE MENU ---------
+http://localhost/emoncms/example/1
 
-/*  EXAMPLE MARKUP OF A SINGLE MENU --------------------------------------
-    http://localhost/emoncms/example/1
+<div id="sidebar_apps" class="sidebar-inner active">
+    <h4 class="sidebar-title">Apps</h4>
+    <ul id="menu-apps" class="nav sidebar-menu">
+        <li class="collapse in active"><a class="active" href="http://localhost/emoncms/example/1" title="Example 1">Example 1</a></li>
+        <li class="collapse in"><a href="http://localhost/emoncms/example/2" title="Example 2">Example 2</a></li>
+    </ul>
+</div>
 
-    <div id="sidebar_apps" class="sidebar-inner active">
-        <h4 class="sidebar-title">Apps</h4>
-        <ul id="menu-apps" class="nav sidebar-menu">
-            <li class="collapse in active"><a class="active" href="http://localhost/emoncms/example/1" title="Example 1">Example 1</a></li>
-            <li class="collapse in"><a href="http://localhost/emoncms/example/2" title="Example 2">Example 2</a></li>
-        </ul>
-    </div>
 
-    EXAMPLE END -----------------------------------------------------------
-*/
+
+--------- EXAMPLE END */
 load_language_files("Theme/locale", "theme_messages");
 
 if (!isset($session['profile'])) {

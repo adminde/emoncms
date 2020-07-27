@@ -1331,7 +1331,7 @@ function inputUpdateStatus(input) {
  */
 function inputElapsedStatus(elapsed) {
     var status = 'status-none';
-    if (elapsed < 60) {
+    if (elapsed < 900) {
         status = 'status-success'; 
     }
     else if (elapsed < 900) {

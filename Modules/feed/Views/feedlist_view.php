@@ -674,7 +674,7 @@ function feedMissedStatus(missed) {
  * @return string
  */
 function feedElapsedStatus(elapsed) {
-    if (elapsed < 60) {
+    if (elapsed < 900) {
         return 'status-success'; 
     }
     else if (elapsed < 900) {

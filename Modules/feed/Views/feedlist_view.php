@@ -429,15 +429,13 @@ function update_feed_list() {
             $("#feed-footer").show();
             $("#feed-none").hide();
         }
-        feeds = {};
-        for (var z in data) feeds[data[z].id] = data[z];
         nodes = {};
-        for (var z in feeds) {
-            var node = feeds[z].tag;
+        for (var z in data) {
+            var node = data[z].tag;
             if (nodes[node]==undefined) nodes[node] = [];
 
             if (nodes_display[node]==undefined) nodes_display[node] = true;
-            nodes[node].push(feeds[z]);
+            nodes[node].push(data[z]);
         }
         if (firstLoad && Object.keys(nodes).length > 1 && Object.keys(nodes_display).length == 0) {
             for (var node in nodes) {

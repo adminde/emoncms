@@ -312,10 +312,16 @@ class Input
     public function get_list($userid)
     {
         if ($this->redis) {
-            return $this->redis_get_list($userid);
+            $inputs = $this->redis_get_list($userid);
         } else {
-            return $this->mysql_get_list($userid);
+            $inputs = $this->mysql_get_list($userid);
         }
+        usort($inputs, function($i1, $i2) {
+            if($i1['nodeid'] == $i2['nodeid'])
+                return strcmp($i1['name'], $i2['name']);
+                return strcmp($i1['nodeid'], $i2['nodeid']);
+        });
+        return $inputs;
     }
 
     private function redis_get_list($userid)
@@ -350,11 +356,6 @@ class Input
             }
             $inputs[] = $row;
         }
-        usort($inputs, function($i1, $i2) {
-            if($i1['nodeid'] == $i2['nodeid'])
-                return strcmp($i1['name'], $i2['name']);
-            return strcmp($i1['nodeid'], $i2['nodeid']);
-        });
         return $inputs;
     }
 

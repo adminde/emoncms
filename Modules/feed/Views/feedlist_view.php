@@ -429,6 +429,7 @@ function update_feed_list() {
             $("#feed-footer").show();
             $("#feed-none").hide();
         }
+        feeds = {};
         nodes = {};
         for (var z in data) {
             var node = data[z].tag;
@@ -436,6 +437,7 @@ function update_feed_list() {
 
             if (nodes_display[node]==undefined) nodes_display[node] = true;
             nodes[node].push(data[z]);
+			feeds[data[z].id] = data[z];
         }
         if (firstLoad && Object.keys(nodes).length > 1 && Object.keys(nodes_display).length == 0) {
             for (var node in nodes) {

@@ -87,11 +87,11 @@ class MysqlTimeSeries implements engine_methods
     */
     public function delete($feedid)
     {
+        $table = $this->get_table_name(intval($feedid));
         $meta = $this->dir."$feedid.meta";
-        if (!file_exists($meta)) {
+        if (file_exists($meta)) {
             unlink($meta);
         }
-        $table = $this->get_table_name(intval($feedid));
         $this->mysqli->query("DROP TABLE $table");
     }
 
